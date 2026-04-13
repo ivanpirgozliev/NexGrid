@@ -30,13 +30,13 @@ export function GamePage() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="flex items-start justify-center gap-6 py-8 px-4 min-h-[calc(100vh-64px)]"
+      className="flex items-start justify-center gap-8 py-8 px-4 min-h-[calc(100vh-64px)]"
     >
-      <div className="flex flex-col gap-3 w-40">
+      <div className="flex flex-col gap-3 w-48">
         <GameStats score={state.score} level={state.level} lines={state.lines} />
       </div>
 
-      <div className="relative" style={{ width: '300px', height: '600px' }}>
+      <div className="relative" style={{ width: '360px', height: '720px' }}>
         {state.current !== null || state.status !== 'idle' ? (
           <Board
             board={state.board}
@@ -58,7 +58,7 @@ export function GamePage() {
         />
       </div>
 
-      <div className="flex flex-col gap-3 w-40">
+      <div className="flex flex-col gap-3 w-48">
         <NextPiece type={state.next} />
 
         {state.status === 'playing' && (

@@ -5,6 +5,8 @@ import { Cell } from './Cell';
 import { getBoardWithGhost } from '../utils/board';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '../utils/board';
 
+const CELL_SIZE = 36;
+
 interface BoardProps {
   board: BoardType;
   current: Tetromino | null;
@@ -65,7 +67,7 @@ export const Board = memo(function Board({ board, current, clearedRows }: BoardP
         <div
           key={rowIdx}
           className="flex"
-          style={{ width: `${BOARD_WIDTH * 30}px`, height: '30px' }}
+          style={{ width: `${BOARD_WIDTH * CELL_SIZE}px`, height: `${CELL_SIZE}px` }}
         >
           <AnimatePresence>
             {clearedRows.includes(rowIdx) && (
@@ -75,13 +77,13 @@ export const Board = memo(function Board({ board, current, clearedRows }: BoardP
                 animate={{ opacity: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="absolute inset-x-0 h-[30px] bg-white/30 pointer-events-none"
-                style={{ top: `${rowIdx * 30}px` }}
+                className="absolute inset-x-0 bg-white/30 pointer-events-none"
+                style={{ top: `${rowIdx * CELL_SIZE}px`, height: `${CELL_SIZE}px` }}
               />
             )}
           </AnimatePresence>
           {row.map((cell, colIdx) => (
-            <div key={colIdx} style={{ width: '30px', height: '30px' }} className="p-px">
+            <div key={colIdx} style={{ width: CELL_SIZE, height: CELL_SIZE }} className="p-px">
               <Cell value={cell.value} isGhost={cell.isGhost} />
             </div>
           ))}
