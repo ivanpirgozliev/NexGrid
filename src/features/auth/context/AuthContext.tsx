@@ -1,0 +1,80 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '../../../lib/supabase';
+
+interface AuthContextValue {
+  session: Session | null;
+  user: SupabaseUser | null;
+  username: string | null;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [initialised, setInitialised] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+      setInitialised(true);
+      if (data.session?.user) {
+        fetchUsername(data.session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        if (newSession?.user) {
+          (async () => {
+            await fetchUsername(newSession.user.id);
+          })();
+        }
+        return;
+      }
+
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      if (!newSession?.user) {
+        setUsername(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function fetchUsername(userId: string) {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .maybeSingle();
+      setUsername(data?.username ?? null);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <AuthContext.Provider value={{ session, user, username, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuthContext() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuthContext must be used within AuthProvider');
+  return ctx;
+}

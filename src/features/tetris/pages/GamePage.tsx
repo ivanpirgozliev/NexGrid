@@ -1,0 +1,81 @@
+import { useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Pause, Play } from 'lucide-react';
+import { useTetris } from '../hooks/useTetris';
+import { useSaveScore } from '../hooks/useSaveScore';
+import { Board } from '../components/Board';
+import { GameStats } from '../components/GameStats';
+import { NextPiece } from '../components/NextPiece';
+import { GameOverlay } from '../components/GameOverlay';
+import { Controls } from '../components/Controls';
+import { Button } from '../../../components/ui/Button';
+
+export function GamePage() {
+  const { state, start, pause, resume } = useTetris();
+  const { saveScore, resetSaved } = useSaveScore();
+
+  useEffect(() => {
+    if (state.status === 'over' && state.score > 0) {
+      saveScore(state.score, state.level, state.lines);
+    }
+  }, [state.status, state.score, state.level, state.lines, saveScore]);
+
+  function handleStart() {
+    resetSaved();
+    start();
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="flex items-start justify-center gap-6 py-8 px-4 min-h-[calc(100vh-64px)]"
+    >
+      <div className="flex flex-col gap-3 w-40">
+        <GameStats score={state.score} level={state.level} lines={state.lines} />
+      </div>
+
+      <div className="relative" style={{ width: '300px', height: '600px' }}>
+        {state.current !== null || state.status !== 'idle' ? (
+          <Board
+            board={state.board}
+            current={state.current}
+            clearedRows={state.clearedRows}
+          />
+        ) : (
+          <Board
+            board={state.board}
+            current={null}
+            clearedRows={[]}
+          />
+        )}
+        <GameOverlay
+          status={state.status}
+          score={state.score}
+          onStart={handleStart}
+          onResume={resume}
+        />
+      </div>
+
+      <div className="flex flex-col gap-3 w-40">
+        <NextPiece type={state.next} />
+
+        {state.status === 'playing' && (
+          <Button variant="secondary" size="sm" onClick={pause} className="w-full gap-1.5">
+            <Pause className="w-3.5 h-3.5" />
+            Pause
+          </Button>
+        )}
+        {state.status === 'paused' && (
+          <Button variant="secondary" size="sm" onClick={resume} className="w-full gap-1.5">
+            <Play className="w-3.5 h-3.5" />
+            Resume
+          </Button>
+        )}
+
+        <Controls />
+      </div>
+    </motion.div>
+  );
+}
