@@ -16,19 +16,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [initialised, setInitialised] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setInitialised(true);
-      if (data.session?.user) {
-        fetchUsername(data.session.user.id);
-      } else {
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        if (data.session?.user) {
+          fetchUsername(data.session.user.id);
+        } else {
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
         setIsLoading(false);
-      }
-    });
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {

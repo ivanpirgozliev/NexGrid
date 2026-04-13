@@ -16,10 +16,15 @@ function AuthLayout() {
 
 export const router = createBrowserRouter([
   {
+    path: '/',
     element: <AuthLayout />,
     children: [
       {
-        path: '/auth',
+        index: true,
+        element: <Navigate to="/game" replace />,
+      },
+      {
+        path: 'auth',
         element: <AuthPage />,
       },
       {
@@ -29,11 +34,11 @@ export const router = createBrowserRouter([
             element: <AppLayout />,
             children: [
               {
-                path: '/game',
+                path: 'game',
                 element: <GamePage />,
               },
               {
-                path: '/leaderboard',
+                path: 'leaderboard',
                 element: <LeaderboardPage />,
               },
             ],
