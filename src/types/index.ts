@@ -16,9 +16,11 @@ export interface Score {
 }
 
 export interface LeaderboardEntry {
+  score_id: string;
   user_id: string;
   username: string;
-  best_score: number;
-  best_level: number;
-  games_played: number;
+  score: number;
+  level: number;
+  lines: number;
+  created_at: string;
 }

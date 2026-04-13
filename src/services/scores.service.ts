@@ -27,8 +27,8 @@ export const scoresService = {
     const { data, error } = await supabase
       .from('leaderboard')
       .select('*')
-      .order('best_score', { ascending: false })
-      .limit(20);
+      .order('score', { ascending: false })
+      .limit(10);
     if (error) throw error;
     return (data ?? []) as LeaderboardEntry[];
   },

@@ -18,6 +18,14 @@ function RankBadge({ rank }: { rank: number }) {
   return <span className="text-gray-600 text-sm font-mono w-4 text-center">{rank}</span>;
 }
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 export const LeaderboardTable = memo(function LeaderboardTable({
   entries,
   currentUserId,
@@ -34,13 +42,16 @@ export const LeaderboardTable = memo(function LeaderboardTable({
               Player
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Best Score
+              Score
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
               Level
             </th>
+            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+              Lines
+            </th>
             <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
-              Games
+              Date
             </th>
           </tr>
         </thead>
@@ -49,7 +60,7 @@ export const LeaderboardTable = memo(function LeaderboardTable({
             const isCurrent = entry.user_id === currentUserId;
             return (
               <motion.tr
-                key={entry.user_id}
+                key={entry.score_id}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.03 }}
@@ -78,14 +89,17 @@ export const LeaderboardTable = memo(function LeaderboardTable({
                 </td>
                 <td className="px-4 py-3.5 text-right">
                   <span className="text-sm font-bold text-white tabular-nums">
-                    {entry.best_score.toLocaleString()}
+                    {entry.score.toLocaleString()}
                   </span>
                 </td>
                 <td className="px-4 py-3.5 text-right hidden sm:table-cell">
-                  <span className="text-sm text-gray-400 tabular-nums">{entry.best_level}</span>
+                  <span className="text-sm text-gray-400 tabular-nums">{entry.level}</span>
+                </td>
+                <td className="px-4 py-3.5 text-right hidden sm:table-cell">
+                  <span className="text-sm text-gray-400 tabular-nums">{entry.lines}</span>
                 </td>
                 <td className="px-4 py-3.5 text-right hidden md:table-cell">
-                  <span className="text-sm text-gray-500 tabular-nums">{entry.games_played}</span>
+                  <span className="text-xs text-gray-500">{formatDate(entry.created_at)}</span>
                 </td>
               </motion.tr>
             );

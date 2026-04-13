@@ -23,7 +23,7 @@ export function LeaderboardPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Leaderboard</h1>
-            <p className="text-gray-500 text-sm">Top players worldwide</p>
+            <p className="text-gray-500 text-sm">Top 10 scores</p>
           </div>
         </div>
         <Button
