@@ -7,6 +7,7 @@ export function useSaveScore() {
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const savedRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: scoresService.saveScore,
@@ -16,18 +17,33 @@ export function useSaveScore() {
     },
   });
 
+  const startSession = useCallback(async () => {
+    if (!user) return;
+    try {
+      sessionIdRef.current = await scoresService.startGameSession();
+    } catch {
+      sessionIdRef.current = null;
+    }
+  }, [user]);
+
   const saveScore = useCallback(
     (score: number, level: number, lines: number) => {
       if (!user || savedRef.current || score === 0) return;
       savedRef.current = true;
-      mutation.mutate({ score, level, lines });
+      mutation.mutate({
+        score,
+        level,
+        lines,
+        session_id: sessionIdRef.current ?? undefined,
+      });
     },
     [user, mutation]
   );
 
   const resetSaved = useCallback(() => {
     savedRef.current = false;
+    sessionIdRef.current = null;
   }, []);
 
-  return { saveScore, resetSaved, isSaving: mutation.isPending };
+  return { saveScore, resetSaved, startSession, isSaving: mutation.isPending };
 }

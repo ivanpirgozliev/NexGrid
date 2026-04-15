@@ -12,7 +12,7 @@ import { Button } from '../../../components/ui/Button';
 
 export function GamePage() {
   const { state, start, pause, resume } = useTetris();
-  const { saveScore, resetSaved } = useSaveScore();
+  const { saveScore, resetSaved, startSession } = useSaveScore();
 
   useEffect(() => {
     if (state.status === 'over' && state.score > 0) {
@@ -20,8 +20,9 @@ export function GamePage() {
     }
   }, [state.status, state.score, state.level, state.lines, saveScore]);
 
-  function handleStart() {
+  async function handleStart() {
     resetSaved();
+    await startSession();
     start();
   }
 

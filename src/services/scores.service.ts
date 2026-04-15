@@ -4,18 +4,38 @@ import type { Score, LeaderboardEntry } from '../types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const scoresService = {
-  async saveScore(payload: { score: number; level: number; lines: number }) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('Not authenticated');
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${session.access_token}`,
+    'Apikey': SUPABASE_ANON_KEY,
+  };
+}
 
+export const scoresService = {
+  async startGameSession(): Promise<string> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/start-game`, {
+      method: 'POST',
+      headers,
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to start game session');
+    }
+
+    const data = await res.json();
+    return data.id;
+  },
+
+  async saveScore(payload: { score: number; level: number; lines: number; session_id?: string }) {
+    const headers = await getAuthHeaders();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-score`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'Apikey': SUPABASE_ANON_KEY,
-      },
+      headers,
       body: JSON.stringify(payload),
     });
 

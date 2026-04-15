@@ -19,12 +19,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
-        if (data.session?.user) {
-          fetchUsername(data.session.user.id);
+      .getUser()
+      .then(({ data: { user: verifiedUser } }) => {
+        if (verifiedUser) {
+          setUser(verifiedUser);
+          supabase.auth.getSession().then(({ data }) => {
+            setSession(data.session);
+          });
+          fetchUsername(verifiedUser.id);
         } else {
           setIsLoading(false);
         }
