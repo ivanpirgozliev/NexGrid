@@ -28,13 +28,13 @@ export function useSaveScore() {
 
   const saveScore = useCallback(
     (score: number, level: number, lines: number) => {
-      if (!user || savedRef.current || score === 0) return;
+      if (!user || savedRef.current || score === 0 || !sessionIdRef.current) return;
       savedRef.current = true;
       mutation.mutate({
         score,
         level,
         lines,
-        session_id: sessionIdRef.current ?? undefined,
+        session_id: sessionIdRef.current,
       });
     },
     [user, mutation]

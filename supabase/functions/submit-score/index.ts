@@ -35,8 +35,8 @@ function computeMaxScore(lines: number): number {
 }
 
 const RATE_LIMIT_SECONDS = 5;
-const MAX_LINES_POSSIBLE = 9999;
-const MAX_LEVEL_POSSIBLE = 1000;
+const MAX_LINES_POSSIBLE = 999;
+const MAX_LEVEL_POSSIBLE = 100;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -127,39 +127,42 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid score data" }, 400);
     }
 
+    if (typeof session_id !== "string" || session_id.length === 0) {
+      console.warn(`Missing game session from user ${user.id}`);
+      return jsonResponse({ error: "Game session required" }, 400);
+    }
+
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    if (typeof session_id === "string" && session_id.length > 0) {
-      const { data: sessionData, error: sessionError } = await adminClient
-        .from("game_sessions")
-        .select("id, user_id, started_at, completed")
-        .eq("id", session_id)
-        .eq("user_id", user.id)
-        .eq("completed", false)
-        .maybeSingle();
+    const { data: sessionData, error: sessionError } = await adminClient
+      .from("game_sessions")
+      .select("id, user_id, started_at, completed")
+      .eq("id", session_id)
+      .eq("user_id", user.id)
+      .eq("completed", false)
+      .maybeSingle();
 
-      if (sessionError || !sessionData) {
-        console.warn(
-          `Invalid game session from user ${user.id}: session_id=${session_id}`
-        );
-        return jsonResponse({ error: "Invalid game session" }, 400);
-      }
-
-      const sessionAge =
-        (Date.now() - new Date(sessionData.started_at).getTime()) / 1000;
-      const minGameDuration = Math.max(3, lines * 0.4);
-      if (sessionAge < minGameDuration) {
-        console.warn(
-          `Suspiciously fast game from user ${user.id}: ${sessionAge}s for ${lines} lines`
-        );
-        return jsonResponse({ error: "Invalid game session" }, 400);
-      }
-
-      await adminClient
-        .from("game_sessions")
-        .update({ completed: true })
-        .eq("id", session_id);
+    if (sessionError || !sessionData) {
+      console.warn(
+        `Invalid game session from user ${user.id}: session_id=${session_id}`
+      );
+      return jsonResponse({ error: "Invalid game session" }, 400);
     }
+
+    const sessionAge =
+      (Date.now() - new Date(sessionData.started_at).getTime()) / 1000;
+    const minGameDuration = Math.max(3, lines * 0.4);
+    if (sessionAge < minGameDuration) {
+      console.warn(
+        `Suspiciously fast game from user ${user.id}: ${sessionAge}s for ${lines} lines`
+      );
+      return jsonResponse({ error: "Invalid game session" }, 400);
+    }
+
+    await adminClient
+      .from("game_sessions")
+      .update({ completed: true })
+      .eq("id", session_id);
 
     const { data: recent } = await adminClient
       .from("scores")

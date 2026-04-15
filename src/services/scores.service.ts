@@ -31,7 +31,7 @@ export const scoresService = {
     return data.id;
   },
 
-  async saveScore(payload: { score: number; level: number; lines: number; session_id?: string }) {
+  async saveScore(payload: { score: number; level: number; lines: number; session_id: string }) {
     const headers = await getAuthHeaders();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-score`, {
       method: 'POST',
