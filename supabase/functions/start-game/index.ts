@@ -15,7 +15,15 @@ function jsonResponse(body: Record<string, unknown>, status: number) {
   });
 }
 
-const MAX_ACTIVE_SESSIONS = 5;
+function generateToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+const MAX_ACTIVE_SESSIONS = 3;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -76,9 +84,11 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Too many active sessions" }, 429);
     }
 
+    const token = generateToken();
+
     const { data, error } = await adminClient
       .from("game_sessions")
-      .insert({ user_id: user.id })
+      .insert({ user_id: user.id, token })
       .select("id, started_at")
       .single();
 

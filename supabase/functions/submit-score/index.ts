@@ -19,10 +19,8 @@ const LINE_POINTS = [0, 100, 300, 500, 800];
 
 function computeMaxScore(lines: number): number {
   if (lines <= 0) return 0;
-
   let total = 0;
   let currentLines = 0;
-
   while (currentLines < lines) {
     const currentLevel = Math.floor(currentLines / 10) + 1;
     const remaining = lines - currentLines;
@@ -30,13 +28,26 @@ function computeMaxScore(lines: number): number {
     total += (LINE_POINTS[batch] ?? 0) * currentLevel;
     currentLines += batch;
   }
+  return total;
+}
 
+function computeMinScore(lines: number): number {
+  if (lines <= 0) return 0;
+  let total = 0;
+  let currentLines = 0;
+  while (currentLines < lines) {
+    const currentLevel = Math.floor(currentLines / 10) + 1;
+    total += LINE_POINTS[1] * currentLevel;
+    currentLines += 1;
+  }
   return total;
 }
 
 const RATE_LIMIT_SECONDS = 5;
 const MAX_LINES_POSSIBLE = 999;
 const MAX_LEVEL_POSSIBLE = 100;
+const MIN_SECONDS_PER_LINE = 1.5;
+const MIN_SESSION_SECONDS = 10;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -59,7 +70,6 @@ Deno.serve(async (req: Request) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.warn("Score submission attempt without authorization header");
       return jsonResponse({ error: "Missing authorization" }, 401);
     }
 
@@ -72,7 +82,6 @@ Deno.serve(async (req: Request) => {
       error: authError,
     } = await userClient.auth.getUser();
     if (authError || !user) {
-      console.warn("Score submission with invalid token");
       return jsonResponse({ error: "Authentication failed" }, 401);
     }
 
@@ -127,6 +136,16 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid score data" }, 400);
     }
 
+    if (lines > 0) {
+      const minScore = computeMinScore(lines);
+      if (score < minScore) {
+        console.warn(
+          `Score below minimum from user ${user.id}: score=${score}, min=${minScore}, lines=${lines}`
+        );
+        return jsonResponse({ error: "Invalid score data" }, 400);
+      }
+    }
+
     if (typeof session_id !== "string" || session_id.length === 0) {
       console.warn(`Missing game session from user ${user.id}`);
       return jsonResponse({ error: "Game session required" }, 400);
@@ -136,13 +155,13 @@ Deno.serve(async (req: Request) => {
 
     const { data: sessionData, error: sessionError } = await adminClient
       .from("game_sessions")
-      .select("id, user_id, started_at, completed")
+      .select("id, user_id, started_at, completed, token")
       .eq("id", session_id)
       .eq("user_id", user.id)
       .eq("completed", false)
       .maybeSingle();
 
-    if (sessionError || !sessionData) {
+    if (sessionError || !sessionData || !sessionData.token) {
       console.warn(
         `Invalid game session from user ${user.id}: session_id=${session_id}`
       );
@@ -151,10 +170,28 @@ Deno.serve(async (req: Request) => {
 
     const sessionAge =
       (Date.now() - new Date(sessionData.started_at).getTime()) / 1000;
-    const minGameDuration = Math.max(3, lines * 0.4);
-    if (sessionAge < minGameDuration) {
+
+    if (sessionAge < MIN_SESSION_SECONDS) {
       console.warn(
-        `Suspiciously fast game from user ${user.id}: ${sessionAge}s for ${lines} lines`
+        `Session too short from user ${user.id}: ${sessionAge}s`
+      );
+      return jsonResponse({ error: "Invalid game session" }, 400);
+    }
+
+    if (lines > 0) {
+      const minDuration = lines * MIN_SECONDS_PER_LINE;
+      if (sessionAge < minDuration) {
+        console.warn(
+          `Suspiciously fast game from user ${user.id}: ${sessionAge}s for ${lines} lines (min ${minDuration}s)`
+        );
+        return jsonResponse({ error: "Invalid game session" }, 400);
+      }
+    }
+
+    const maxPossibleLines = Math.floor(sessionAge / MIN_SECONDS_PER_LINE);
+    if (lines > maxPossibleLines) {
+      console.warn(
+        `Too many lines for session duration from user ${user.id}: ${lines} lines in ${sessionAge}s`
       );
       return jsonResponse({ error: "Invalid game session" }, 400);
     }
@@ -198,7 +235,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.info(
-      `Score saved for user ${user.id}: score=${score}, level=${level}, lines=${lines}`
+      `Score saved for user ${user.id}: score=${score}, level=${level}, lines=${lines}, duration=${sessionAge}s`
     );
     return jsonResponse(data as Record<string, unknown>, 200);
   } catch (err) {
