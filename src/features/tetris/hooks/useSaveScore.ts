@@ -20,7 +20,7 @@ export function useSaveScore() {
     (score: number, level: number, lines: number) => {
       if (!user || savedRef.current || score === 0) return;
       savedRef.current = true;
-      mutation.mutate({ user_id: user.id, score, level, lines });
+      mutation.mutate({ score, level, lines });
     },
     [user, mutation]
   );
