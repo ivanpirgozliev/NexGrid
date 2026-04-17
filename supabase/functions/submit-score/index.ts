@@ -146,16 +146,23 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const { token } = body as Record<string, unknown>;
+
     if (typeof session_id !== "string" || session_id.length === 0) {
       console.warn(`Missing game session from user ${user.id}`);
       return jsonResponse({ error: "Game session required" }, 400);
+    }
+
+    if (typeof token !== "string" || token.length === 0) {
+      console.warn(`Missing token from user ${user.id}`);
+      return jsonResponse({ error: "Token required" }, 400);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: sessionData, error: sessionError } = await adminClient
       .from("game_sessions")
-      .select("id, user_id, started_at, completed, token")
+      .select("id, user_id, started_at, completed, token, heartbeat_count")
       .eq("id", session_id)
       .eq("user_id", user.id)
       .eq("completed", false)
@@ -166,6 +173,13 @@ Deno.serve(async (req: Request) => {
         `Invalid game session from user ${user.id}: session_id=${session_id}`
       );
       return jsonResponse({ error: "Invalid game session" }, 400);
+    }
+
+    if (sessionData.token !== token) {
+      console.warn(
+        `Token mismatch from user ${user.id}: session_id=${session_id}`
+      );
+      return jsonResponse({ error: "Invalid token" }, 403);
     }
 
     const sessionAge =
@@ -192,6 +206,19 @@ Deno.serve(async (req: Request) => {
     if (lines > maxPossibleLines) {
       console.warn(
         `Too many lines for session duration from user ${user.id}: ${lines} lines in ${sessionAge}s`
+      );
+      return jsonResponse({ error: "Invalid game session" }, 400);
+    }
+
+    const HEARTBEAT_INTERVAL = 15;
+    const expectedHeartbeats = Math.max(
+      0,
+      Math.floor((sessionAge - HEARTBEAT_INTERVAL) / HEARTBEAT_INTERVAL)
+    );
+    const heartbeats = sessionData.heartbeat_count ?? 0;
+    if (expectedHeartbeats > 0 && heartbeats < Math.ceil(expectedHeartbeats * 0.5)) {
+      console.warn(
+        `Insufficient heartbeats from user ${user.id}: got ${heartbeats}, expected ~${expectedHeartbeats} for ${sessionAge}s session`
       );
       return jsonResponse({ error: "Invalid game session" }, 400);
     }

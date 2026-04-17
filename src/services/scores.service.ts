@@ -14,8 +14,13 @@ async function getAuthHeaders() {
   };
 }
 
+export interface GameSession {
+  id: string;
+  token: string;
+}
+
 export const scoresService = {
-  async startGameSession(): Promise<string> {
+  async startGameSession(): Promise<GameSession> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/start-game`, {
       method: 'POST',
@@ -28,10 +33,19 @@ export const scoresService = {
     }
 
     const data = await res.json();
-    return data.id;
+    return { id: data.id, token: data.token };
   },
 
-  async saveScore(payload: { score: number; level: number; lines: number; session_id: string }) {
+  async sendHeartbeat(sessionId: string, token: string): Promise<void> {
+    const headers = await getAuthHeaders();
+    await fetch(`${SUPABASE_URL}/functions/v1/game-heartbeat`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ session_id: sessionId, token }),
+    });
+  },
+
+  async saveScore(payload: { score: number; level: number; lines: number; session_id: string; token: string }) {
     const headers = await getAuthHeaders();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-score`, {
       method: 'POST',
