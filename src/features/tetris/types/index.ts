@@ -15,7 +15,7 @@ export interface Tetromino {
   position: Position;
 }
 
-export type GameStatus = 'idle' | 'playing' | 'paused' | 'over';
+export type GameStatus = 'idle' | 'playing' | 'paused' | 'over' | 'clearing';
 
 export interface GameState {
   board: Board;

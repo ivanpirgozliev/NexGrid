@@ -40,20 +40,30 @@ export function mergeTetromino(board: Board, tetromino: Tetromino): Board {
   return newBoard;
 }
 
-export function clearLines(board: Board): { board: Board; clearedCount: number; clearedRows: number[] } {
-  const clearedRows: number[] = [];
-  const remaining = board.filter((row, idx) => {
-    if (row.every((cell) => cell !== null)) {
-      clearedRows.push(idx);
-      return false;
+export function findFullRows(board: Board): number[] {
+  const rows: number[] = [];
+  for (let i = 0; i < board.length; i++) {
+    if (board[i].every((cell) => cell !== null)) {
+      rows.push(i);
     }
-    return true;
-  });
-  const clearedCount = clearedRows.length;
+  }
+  return rows;
+}
+
+export function removeRows(board: Board, rows: number[]): { board: Board; clearedCount: number } {
+  const rowSet = new Set(rows);
+  const remaining = board.filter((_, idx) => !rowSet.has(idx));
+  const clearedCount = rows.length;
   const newRows: Board = Array.from({ length: clearedCount }, () =>
     Array<CellValue>(BOARD_WIDTH).fill(null)
   );
-  return { board: [...newRows, ...remaining], clearedCount, clearedRows };
+  return { board: [...newRows, ...remaining], clearedCount };
+}
+
+export function clearLines(board: Board): { board: Board; clearedCount: number; clearedRows: number[] } {
+  const clearedRows = findFullRows(board);
+  const { board: newBoard, clearedCount } = removeRows(board, clearedRows);
+  return { board: newBoard, clearedCount, clearedRows };
 }
 
 export function getBoardWithGhost(board: Board, tetromino: Tetromino): { ghostY: number } {

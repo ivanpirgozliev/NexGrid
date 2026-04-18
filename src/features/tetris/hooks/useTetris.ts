@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useReducer } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import type { GameState, Tetromino } from '../types';
 import {
   createEmptyBoard,
   isValidPosition,
   mergeTetromino,
-  clearLines,
+  findFullRows,
+  removeRows,
   getBoardWithGhost,
 } from '../utils/board';
 import {
@@ -14,6 +15,8 @@ import {
 } from '../utils/tetrominos';
 import { calculateScore, calculateLevel, calculateDropInterval } from '../utils/scoring';
 import { useGameLoop } from './useGameLoop';
+
+const CLEAR_ANIMATION_MS = 400;
 
 type Action =
   | { type: 'START' }
@@ -25,7 +28,8 @@ type Action =
   | { type: 'ROTATE' }
   | { type: 'HARD_DROP' }
   | { type: 'TICK' }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'FINISH_CLEAR' };
 
 function initState(): GameState {
   return {
@@ -46,13 +50,35 @@ function spawnNext(state: GameState): GameState {
   if (!isValidPosition(state.board, newPiece)) {
     return { ...state, status: 'over', current: null };
   }
-  return { ...state, current: newPiece, next: nextType, clearedRows: [] };
+  return { ...state, current: newPiece, next: nextType };
 }
 
 function lockPiece(state: GameState): GameState {
   if (!state.current) return state;
   const merged = mergeTetromino(state.board, state.current);
-  const { board: clearedBoard, clearedCount, clearedRows } = clearLines(merged);
+  const fullRows = findFullRows(merged);
+
+  if (fullRows.length > 0) {
+    return {
+      ...state,
+      board: merged,
+      current: null,
+      clearedRows: fullRows,
+      status: 'clearing',
+    };
+  }
+
+  const newState: GameState = {
+    ...state,
+    board: merged,
+    current: null,
+    clearedRows: [],
+  };
+  return spawnNext(newState);
+}
+
+function finishClear(state: GameState): GameState {
+  const { board: clearedBoard, clearedCount } = removeRows(state.board, state.clearedRows);
   const newLines = state.lines + clearedCount;
   const newLevel = calculateLevel(newLines);
   const newScore = state.score + calculateScore(clearedCount, newLevel);
@@ -63,7 +89,8 @@ function lockPiece(state: GameState): GameState {
     level: newLevel,
     lines: newLines,
     current: null,
-    clearedRows,
+    clearedRows: [],
+    status: 'playing',
   };
   return spawnNext(interim);
 }
@@ -123,6 +150,10 @@ function reducer(state: GameState, action: Action): GameState {
       const dropped = { ...state.current, position: { ...state.current.position, y: ghostY } };
       return lockPiece({ ...state, current: dropped });
     }
+    case 'FINISH_CLEAR': {
+      if (state.status !== 'clearing') return state;
+      return finishClear(state);
+    }
     default:
       return state;
   }
@@ -130,11 +161,21 @@ function reducer(state: GameState, action: Action): GameState {
 
 export function useTetris() {
   const [state, dispatch] = useReducer(reducer, undefined, initState);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const dropInterval = calculateDropInterval(state.level);
   const isPlaying = state.status === 'playing';
 
   useGameLoop(() => dispatch({ type: 'TICK' }), dropInterval, isPlaying);
+
+  useEffect(() => {
+    if (state.status === 'clearing') {
+      clearTimerRef.current = setTimeout(() => {
+        dispatch({ type: 'FINISH_CLEAR' });
+      }, CLEAR_ANIMATION_MS);
+      return () => clearTimeout(clearTimerRef.current);
+    }
+  }, [state.status]);
 
   const ghostY = state.current
     ? getBoardWithGhost(state.board, state.current).ghostY
@@ -142,6 +183,7 @@ export function useTetris() {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (state.status === 'clearing') return;
       switch (e.code) {
         case 'ArrowLeft':
           e.preventDefault();

@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import type { Board as BoardType, Tetromino, CellValue, TetrominoType } from '../types';
 import { Cell } from './Cell';
+import { LineClearEffect } from './LineClearEffect';
 import { getBoardWithGhost } from '../utils/board';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '../utils/board';
 
@@ -56,6 +56,8 @@ export const Board = memo(function Board({ board, current, clearedRows }: BoardP
     [board, current]
   );
 
+  const clearedSet = useMemo(() => new Set(clearedRows), [clearedRows]);
+
   return (
     <div
       className="relative border border-gray-700/50 bg-gray-950 rounded-lg overflow-hidden w-full h-full"
@@ -71,29 +73,22 @@ export const Board = memo(function Board({ board, current, clearedRows }: BoardP
         }}
       >
         {renderBoard.map((row, rowIdx) =>
-          row.map((cell, colIdx) => (
-            <div key={`${rowIdx}-${colIdx}`}>
-              <Cell value={cell.value} isGhost={cell.isGhost} />
-            </div>
-          ))
+          row.map((cell, colIdx) => {
+            const isClearing = clearedSet.has(rowIdx);
+            return (
+              <div
+                key={`${rowIdx}-${colIdx}`}
+                style={isClearing ? {
+                  animation: `lineClearCellPop 400ms ${colIdx * 20}ms ease-out forwards`,
+                } : undefined}
+              >
+                <Cell value={cell.value} isGhost={cell.isGhost} />
+              </div>
+            );
+          })
         )}
       </div>
-      <AnimatePresence>
-        {clearedRows.map((rowIdx) => (
-          <motion.div
-            key={`clear-${rowIdx}`}
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="absolute inset-x-0 bg-white/30 pointer-events-none"
-            style={{
-              top: `${(rowIdx / BOARD_HEIGHT) * 100}%`,
-              height: `${(1 / BOARD_HEIGHT) * 100}%`,
-            }}
-          />
-        ))}
-      </AnimatePresence>
+      <LineClearEffect clearedRows={clearedRows} />
     </div>
   );
 });

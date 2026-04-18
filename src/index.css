@@ -43,3 +43,25 @@
     background-size: 40px 40px;
   }
 }
+
+@keyframes lineClearFlash {
+  0% { opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+@keyframes lineClearSweep {
+  0% { transform: translateX(-100%); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes lineClearFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes lineClearCellPop {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 1; filter: brightness(2); }
+  100% { transform: scale(0); opacity: 0; }
+}

@@ -12,7 +12,8 @@ import { Button } from '../../../components/ui/Button';
 
 export function GamePage() {
   const { state, start, pause, resume } = useTetris();
-  const { saveScore, resetSaved, startSession } = useSaveScore(state.status === 'playing');
+  const isActive = state.status === 'playing' || state.status === 'clearing';
+  const { saveScore, resetSaved, startSession } = useSaveScore(isActive);
 
   useEffect(() => {
     if (state.status === 'over' && state.score > 0) {
@@ -60,7 +61,7 @@ export function GamePage() {
         </div>
 
         <div className="shrink-0 flex justify-center h-8">
-          {state.status === 'playing' && (
+          {isActive && (
             <Button variant="secondary" size="sm" onClick={pause} className="w-full max-w-xs gap-1.5 h-8 text-xs">
               <Pause className="w-3 h-3" />
               Pause
@@ -98,7 +99,7 @@ export function GamePage() {
         <div className="flex flex-col gap-3 w-48">
           <NextPiece type={state.next} />
 
-          {state.status === 'playing' && (
+          {isActive && (
             <Button variant="secondary" size="sm" onClick={pause} className="w-full gap-1.5">
               <Pause className="w-3.5 h-3.5" />
               Pause
