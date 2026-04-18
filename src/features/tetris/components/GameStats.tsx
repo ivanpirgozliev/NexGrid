@@ -28,11 +28,12 @@ interface GameStatsProps {
   score: number;
   level: number;
   lines: number;
+  orientation?: 'vertical' | 'horizontal';
 }
 
-export const GameStats = memo(function GameStats({ score, level, lines }: GameStatsProps) {
+export const GameStats = memo(function GameStats({ score, level, lines, orientation = 'vertical' }: GameStatsProps) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className={orientation === 'horizontal' ? 'flex gap-2 w-full' : 'flex flex-col gap-3'}>
       <StatCard label="Score" value={score} />
       <StatCard label="Level" value={level} />
       <StatCard label="Lines" value={lines} />

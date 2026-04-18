@@ -5,26 +5,28 @@ import { Cell } from './Cell';
 
 interface NextPieceProps {
   type: TetrominoType;
+  compact?: boolean;
 }
 
-export const NextPiece = memo(function NextPiece({ type }: NextPieceProps) {
+export const NextPiece = memo(function NextPiece({ type, compact }: NextPieceProps) {
   const shape = TETROMINO_SHAPES[type];
+  const cellSize = compact ? 18 : 30;
 
   return (
-    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Next</p>
-      <div className="flex items-center justify-center min-h-[100px]">
+    <div className={`bg-gray-900/50 border border-gray-800 rounded-xl ${compact ? 'p-2' : 'p-4'}`}>
+      <p className={`font-semibold text-gray-500 uppercase tracking-widest ${compact ? 'text-[10px] mb-1.5' : 'text-xs mb-3'}`}>Next</p>
+      <div className={`flex items-center justify-center ${compact ? 'min-h-[44px]' : 'min-h-[100px]'}`}>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: `repeat(${shape[0].length}, 30px)`,
-            gridTemplateRows: `repeat(${shape.length}, 30px)`,
+            gridTemplateColumns: `repeat(${shape[0].length}, ${cellSize}px)`,
+            gridTemplateRows: `repeat(${shape.length}, ${cellSize}px)`,
             gap: '2px',
           }}
         >
           {shape.map((row, rIdx) =>
             row.map((cell, cIdx) => (
-              <div key={`${rIdx}-${cIdx}`} style={{ width: 30, height: 30 }} className="p-px">
+              <div key={`${rIdx}-${cIdx}`} style={{ width: cellSize, height: cellSize }} className="p-px">
                 <Cell value={cell ? type : null} />
               </div>
             ))

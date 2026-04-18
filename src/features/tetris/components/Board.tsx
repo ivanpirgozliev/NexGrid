@@ -5,8 +5,6 @@ import { Cell } from './Cell';
 import { getBoardWithGhost } from '../utils/board';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '../utils/board';
 
-const CELL_SIZE = 36;
-
 interface BoardProps {
   board: BoardType;
   current: Tetromino | null;
@@ -60,35 +58,42 @@ export const Board = memo(function Board({ board, current, clearedRows }: BoardP
 
   return (
     <div
-      className="relative border border-gray-700/50 bg-gray-950 rounded-lg overflow-hidden"
-      style={{ display: 'grid', gridTemplateRows: `repeat(${BOARD_HEIGHT}, 1fr)` }}
+      className="relative border border-gray-700/50 bg-gray-950 rounded-lg overflow-hidden w-full"
+      style={{ aspectRatio: `${BOARD_WIDTH} / ${BOARD_HEIGHT}` }}
     >
-      {renderBoard.map((row, rowIdx) => (
-        <div
-          key={rowIdx}
-          className="flex"
-          style={{ width: `${BOARD_WIDTH * CELL_SIZE}px`, height: `${CELL_SIZE}px` }}
-        >
-          <AnimatePresence>
-            {clearedRows.includes(rowIdx) && (
-              <motion.div
-                key={`clear-${rowIdx}`}
-                initial={{ opacity: 1 }}
-                animate={{ opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="absolute inset-x-0 bg-white/30 pointer-events-none"
-                style={{ top: `${rowIdx * CELL_SIZE}px`, height: `${CELL_SIZE}px` }}
-              />
-            )}
-          </AnimatePresence>
-          {row.map((cell, colIdx) => (
-            <div key={colIdx} style={{ width: CELL_SIZE, height: CELL_SIZE }} className="p-px">
+      <div
+        className="absolute inset-0 grid"
+        style={{
+          gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`,
+          gridTemplateRows: `repeat(${BOARD_HEIGHT}, 1fr)`,
+          gap: '1px',
+          padding: '1px',
+        }}
+      >
+        {renderBoard.map((row, rowIdx) =>
+          row.map((cell, colIdx) => (
+            <div key={`${rowIdx}-${colIdx}`}>
               <Cell value={cell.value} isGhost={cell.isGhost} />
             </div>
-          ))}
-        </div>
-      ))}
+          ))
+        )}
+      </div>
+      <AnimatePresence>
+        {clearedRows.map((rowIdx) => (
+          <motion.div
+            key={`clear-${rowIdx}`}
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="absolute inset-x-0 bg-white/30 pointer-events-none"
+            style={{
+              top: `${(rowIdx / BOARD_HEIGHT) * 100}%`,
+              height: `${(1 / BOARD_HEIGHT) * 100}%`,
+            }}
+          />
+        ))}
+      </AnimatePresence>
     </div>
   );
 });
