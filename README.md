@@ -2,7 +2,7 @@
 
 ## Demo
 
-**Live:** [https://sb1-wmjgmeyv.bolt.new](https://sb1-wmjgmeyv.bolt.new)
+**Live:** Set your deployed URL here.
 
 ---
 
@@ -215,14 +215,14 @@ npm run typecheck
 npm run build
 ```
 
-If you migrated from Bolt, make sure your Supabase keys were re-added locally. Bolt environment variables are not transferred automatically to your machine.
+If you migrated from another online IDE/template, make sure your Supabase keys were re-added locally. Environment variables are not transferred automatically to your machine.
 
 ### Edge Function Secrets (Supabase)
 
 Set this secret in your Supabase project for production domain control:
 
 ```
-ALLOWED_ORIGINS=https://sb1-wmjgmeyv.bolt.new
+ALLOWED_ORIGINS=https://your-app.example
 ```
 
 You can provide multiple origins as comma-separated values.

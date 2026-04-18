@@ -39,7 +39,7 @@ This document covers score integrity and abuse resistance for:
 - Function endpoints require Authorization bearer tokens.
 - Function-level CORS allowlist:
   - Local dev: localhost/127.0.0.1 ports 5173/5174
-  - Production: https://sb1-wmjgmeyv.bolt.new
+  - Production: https://your-app.example
   - Optional extension via ALLOWED_ORIGINS (comma-separated)
 
 ### Session and Score Integrity
