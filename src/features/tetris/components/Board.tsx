@@ -58,7 +58,7 @@ export const Board = memo(function Board({ board, current, clearedRows }: BoardP
 
   return (
     <div
-      className="relative border border-gray-700/50 bg-gray-950 rounded-lg overflow-hidden w-full"
+      className="relative border border-gray-700/50 bg-gray-950 rounded-lg overflow-hidden w-full h-full"
       style={{ aspectRatio: `${BOARD_WIDTH} / ${BOARD_HEIGHT}` }}
     >
       <div

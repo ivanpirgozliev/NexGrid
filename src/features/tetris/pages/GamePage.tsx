@@ -34,9 +34,9 @@ export function GamePage() {
       className="min-h-[calc(100vh-64px)]"
     >
       {/* Mobile layout */}
-      <div className="lg:hidden flex flex-col items-center px-2 py-3 gap-2">
-        <div className="w-full flex gap-2 items-stretch">
-          <div className="flex-1 flex gap-2 min-w-0">
+      <div className="lg:hidden flex flex-col h-[calc(100dvh-48px)] sm:h-[calc(100dvh-64px)] px-2 py-2 gap-1.5 overflow-hidden">
+        <div className="shrink-0 flex gap-1.5 items-stretch">
+          <div className="flex-1 flex gap-1.5 min-w-0">
             <GameStats score={state.score} level={state.level} lines={state.lines} orientation="horizontal" />
           </div>
           <div className="shrink-0">
@@ -44,22 +44,24 @@ export function GamePage() {
           </div>
         </div>
 
-        <div className="relative w-full max-w-[min(100%,calc((100vh-180px)/2))]">
-          <Board
-            board={state.board}
-            current={state.current}
-            clearedRows={state.clearedRows}
-          />
-          <GameOverlay
-            status={state.status}
-            score={state.score}
-            onStart={handleStart}
-            onResume={resume}
-          />
+        <div className="flex-1 min-h-0 flex items-start justify-center">
+          <div className="relative h-full" style={{ aspectRatio: '10 / 20', maxWidth: '100%' }}>
+            <Board
+              board={state.board}
+              current={state.current}
+              clearedRows={state.clearedRows}
+            />
+            <GameOverlay
+              status={state.status}
+              score={state.score}
+              onStart={handleStart}
+              onResume={resume}
+            />
+          </div>
         </div>
 
         {(state.status === 'playing' || state.status === 'paused') && (
-          <div className="w-full max-w-xs">
+          <div className="shrink-0 mx-auto w-full max-w-xs">
             {state.status === 'playing' && (
               <Button variant="secondary" size="sm" onClick={pause} className="w-full gap-1.5">
                 <Pause className="w-3.5 h-3.5" />

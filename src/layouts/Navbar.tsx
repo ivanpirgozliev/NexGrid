@@ -23,23 +23,23 @@ export function Navbar() {
       initial={{ y: -8, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="sticky top-0 z-50 h-16 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-xl"
+      className="sticky top-0 z-50 h-12 sm:h-16 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-xl"
     >
-      <div className="max-w-6xl mx-auto h-full px-4 flex items-center justify-between">
-        <NavLink to="/game" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">
-            <Gamepad2 className="w-4 h-4 text-cyan-400" />
+      <div className="max-w-6xl mx-auto h-full px-3 sm:px-4 flex items-center justify-between gap-2">
+        <NavLink to="/game" className="flex items-center gap-1.5 sm:gap-2.5 group shrink-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">
+            <Gamepad2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
           </div>
-          <span className="text-white font-bold tracking-tight text-sm">TETRIS</span>
+          <span className="hidden sm:inline text-white font-bold tracking-tight text-sm">TETRIS</span>
         </NavLink>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 sm:gap-1">
           {navLinks.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-gray-800 text-white'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
@@ -47,21 +47,21 @@ export function Navbar() {
               }
             >
               <Icon className="w-3.5 h-3.5" />
-              {label}
+              <span className="hidden xs:inline">{label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           {username && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800">
-              <User className="w-3.5 h-3.5 text-gray-500" />
-              <span className="text-gray-300 text-sm font-medium">{username}</span>
+            <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-gray-900 border border-gray-800 max-w-[120px] sm:max-w-none">
+              <User className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-500 shrink-0" />
+              <span className="text-gray-300 text-xs sm:text-sm font-medium truncate">{username}</span>
             </div>
           )}
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-red-400 hover:bg-red-950/20 transition-colors"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-red-400 hover:bg-red-950/20 transition-colors shrink-0"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Sign out</span>
