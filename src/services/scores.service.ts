@@ -77,7 +77,7 @@ export const scoresService = {
       .from('leaderboard')
       .select('*')
       .order('score', { ascending: false })
-      .limit(10);
+      .limit(100);
     if (error) throw error;
     return (data ?? []) as LeaderboardEntry[];
   },
