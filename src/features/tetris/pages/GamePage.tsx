@@ -76,7 +76,7 @@ export function GamePage() {
       </div>
 
       {/* Desktop layout */}
-      <div className="hidden lg:flex items-center justify-center gap-8 px-4 min-h-[calc(100vh-64px)] py-8">
+      <div className="hidden lg:flex items-start justify-center gap-8 px-4 py-8 max-w-[840px] mx-auto">
         <div className="flex flex-col gap-3 w-48">
           <GameStats score={state.score} level={state.level} lines={state.lines} />
         </div>

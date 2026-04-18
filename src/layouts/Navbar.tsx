@@ -25,7 +25,7 @@ export function Navbar() {
       transition={{ duration: 0.3 }}
       className="sticky top-0 z-50 h-12 sm:h-16 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-xl"
     >
-      <div className="max-w-6xl mx-auto h-full px-3 sm:px-4 flex items-center justify-between gap-2">
+      <div className="mx-auto h-full px-3 sm:px-4 lg:max-w-[840px] flex items-center justify-between gap-2">
         <NavLink to="/game" className="flex items-center gap-1.5 sm:gap-2.5 group shrink-0">
           <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">
             <Gamepad2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
