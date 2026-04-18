@@ -31,7 +31,7 @@ export function GamePage() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="lg:min-h-[calc(100vh-64px)]"
+      className=""
     >
       <div className="lg:hidden flex flex-col h-[calc(100dvh-48px)] sm:h-[calc(100dvh-64px)] px-2 py-1.5 gap-1 overflow-hidden">
         <div className="shrink-0 flex gap-1 items-stretch">
@@ -76,7 +76,7 @@ export function GamePage() {
       </div>
 
       {/* Desktop layout */}
-      <div className="hidden lg:flex items-start justify-center gap-8 py-8 px-4">
+      <div className="hidden lg:flex items-center justify-center gap-8 px-4 min-h-[calc(100vh-64px)] py-8">
         <div className="flex flex-col gap-3 w-48">
           <GameStats score={state.score} level={state.level} lines={state.lines} />
         </div>
