@@ -1,17 +1,60 @@
+// @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
+  "https://sb1-wmjgmeyv.bolt.new",
+];
 
-function jsonResponse(body: Record<string, unknown>, status: number) {
+function normalizeOrigin(origin: string): string {
+  return origin.replace(/\/+$/, "");
+}
+
+function buildAllowedOrigins(): Set<string> {
+  const configured = Deno.env.get("ALLOWED_ORIGINS") ?? "";
+  const merged = [...DEFAULT_ALLOWED_ORIGINS, ...configured.split(",")];
+
+  return new Set(
+    merged
+      .map((origin) => normalizeOrigin(origin.trim()))
+      .filter((origin) => origin.length > 0)
+  );
+}
+
+const allowedOrigins = buildAllowedOrigins();
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return true;
+  return allowedOrigins.has(normalizeOrigin(origin));
+}
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Client-Info, Apikey",
+    "Vary": "Origin",
+  };
+
+  if (origin && isAllowedOrigin(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+}
+
+function jsonResponse(
+  body: Record<string, unknown>,
+  status: number,
+  origin: string | null
+) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 }
 
@@ -48,14 +91,31 @@ const MAX_LINES_POSSIBLE = 999;
 const MAX_LEVEL_POSSIBLE = 100;
 const MIN_SECONDS_PER_LINE = 1.5;
 const MIN_SESSION_SECONDS = 10;
+const MAX_SESSION_SECONDS = 2 * 60 * 60;
+const HEARTBEAT_INTERVAL_SECONDS = 15;
+const HEARTBEAT_GRACE_SECONDS = 5;
+const MAX_HEARTBEAT_STALENESS_SECONDS = 45;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SESSION_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("Origin");
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    if (!isAllowedOrigin(origin)) {
+      return jsonResponse({ error: "Origin not allowed" }, 403, origin);
+    }
+
+    return new Response(null, { status: 200, headers: corsHeaders(origin) });
+  }
+
+  if (!isAllowedOrigin(origin)) {
+    return jsonResponse({ error: "Origin not allowed" }, 403, origin);
   }
 
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
+    return jsonResponse({ error: "Method not allowed" }, 405, origin);
   }
 
   try {
@@ -65,12 +125,12 @@ Deno.serve(async (req: Request) => {
 
     if (!supabaseUrl || !serviceRoleKey || !anonKey) {
       console.error("Missing required environment variables");
-      return jsonResponse({ error: "Server configuration error" }, 500);
+      return jsonResponse({ error: "Server configuration error" }, 500, origin);
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Missing authorization" }, 401);
+      return jsonResponse({ error: "Missing authorization" }, 401, origin);
     }
 
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -82,18 +142,18 @@ Deno.serve(async (req: Request) => {
       error: authError,
     } = await userClient.auth.getUser();
     if (authError || !user) {
-      return jsonResponse({ error: "Authentication failed" }, 401);
+      return jsonResponse({ error: "Authentication failed" }, 401, origin);
     }
 
     let body: unknown;
     try {
       body = await req.json();
     } catch {
-      return jsonResponse({ error: "Invalid request body" }, 400);
+      return jsonResponse({ error: "Invalid request body" }, 400, origin);
     }
 
     if (!body || typeof body !== "object") {
-      return jsonResponse({ error: "Invalid request body" }, 400);
+      return jsonResponse({ error: "Invalid request body" }, 400, origin);
     }
 
     const { score, level, lines, session_id } = body as Record<
@@ -117,7 +177,7 @@ Deno.serve(async (req: Request) => {
       console.warn(
         `Invalid score data from user ${user.id}: score=${score}, level=${level}, lines=${lines}`
       );
-      return jsonResponse({ error: "Invalid score data" }, 400);
+      return jsonResponse({ error: "Invalid score data" }, 400, origin);
     }
 
     const expectedLevel = Math.floor(lines / 10) + 1;
@@ -125,7 +185,7 @@ Deno.serve(async (req: Request) => {
       console.warn(
         `Level mismatch from user ${user.id}: level=${level}, expected=${expectedLevel}, lines=${lines}`
       );
-      return jsonResponse({ error: "Invalid score data" }, 400);
+      return jsonResponse({ error: "Invalid score data" }, 400, origin);
     }
 
     const maxScore = computeMaxScore(lines);
@@ -133,7 +193,7 @@ Deno.serve(async (req: Request) => {
       console.warn(
         `Score exceeds max from user ${user.id}: score=${score}, max=${maxScore}, lines=${lines}`
       );
-      return jsonResponse({ error: "Invalid score data" }, 400);
+      return jsonResponse({ error: "Invalid score data" }, 400, origin);
     }
 
     if (lines > 0) {
@@ -142,27 +202,29 @@ Deno.serve(async (req: Request) => {
         console.warn(
           `Score below minimum from user ${user.id}: score=${score}, min=${minScore}, lines=${lines}`
         );
-        return jsonResponse({ error: "Invalid score data" }, 400);
+        return jsonResponse({ error: "Invalid score data" }, 400, origin);
       }
     }
 
     const { token } = body as Record<string, unknown>;
 
-    if (typeof session_id !== "string" || session_id.length === 0) {
+    if (typeof session_id !== "string" || !UUID_REGEX.test(session_id)) {
       console.warn(`Missing game session from user ${user.id}`);
-      return jsonResponse({ error: "Game session required" }, 400);
+      return jsonResponse({ error: "Game session required" }, 400, origin);
     }
 
-    if (typeof token !== "string" || token.length === 0) {
+    if (typeof token !== "string" || !SESSION_TOKEN_REGEX.test(token)) {
       console.warn(`Missing token from user ${user.id}`);
-      return jsonResponse({ error: "Token required" }, 400);
+      return jsonResponse({ error: "Token required" }, 400, origin);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: sessionData, error: sessionError } = await adminClient
       .from("game_sessions")
-      .select("id, user_id, started_at, completed, token, heartbeat_count")
+      .select(
+        "id, user_id, started_at, completed, token, heartbeat_count, last_heartbeat_at"
+      )
       .eq("id", session_id)
       .eq("user_id", user.id)
       .eq("completed", false)
@@ -172,14 +234,14 @@ Deno.serve(async (req: Request) => {
       console.warn(
         `Invalid game session from user ${user.id}: session_id=${session_id}`
       );
-      return jsonResponse({ error: "Invalid game session" }, 400);
+      return jsonResponse({ error: "Invalid game session" }, 400, origin);
     }
 
     if (sessionData.token !== token) {
       console.warn(
         `Token mismatch from user ${user.id}: session_id=${session_id}`
       );
-      return jsonResponse({ error: "Invalid token" }, 403);
+      return jsonResponse({ error: "Invalid token" }, 403, origin);
     }
 
     const sessionAge =
@@ -189,7 +251,14 @@ Deno.serve(async (req: Request) => {
       console.warn(
         `Session too short from user ${user.id}: ${sessionAge}s`
       );
-      return jsonResponse({ error: "Invalid game session" }, 400);
+      return jsonResponse({ error: "Invalid game session" }, 400, origin);
+    }
+
+    if (sessionAge > MAX_SESSION_SECONDS) {
+      console.warn(
+        `Session too long from user ${user.id}: ${sessionAge}s`
+      );
+      return jsonResponse({ error: "Invalid game session" }, 400, origin);
     }
 
     if (lines > 0) {
@@ -198,7 +267,7 @@ Deno.serve(async (req: Request) => {
         console.warn(
           `Suspiciously fast game from user ${user.id}: ${sessionAge}s for ${lines} lines (min ${minDuration}s)`
         );
-        return jsonResponse({ error: "Invalid game session" }, 400);
+        return jsonResponse({ error: "Invalid game session" }, 400, origin);
       }
     }
 
@@ -207,26 +276,36 @@ Deno.serve(async (req: Request) => {
       console.warn(
         `Too many lines for session duration from user ${user.id}: ${lines} lines in ${sessionAge}s`
       );
-      return jsonResponse({ error: "Invalid game session" }, 400);
+      return jsonResponse({ error: "Invalid game session" }, 400, origin);
     }
 
-    const HEARTBEAT_INTERVAL = 15;
     const expectedHeartbeats = Math.max(
       0,
-      Math.floor((sessionAge - HEARTBEAT_INTERVAL) / HEARTBEAT_INTERVAL)
+      Math.floor((sessionAge - HEARTBEAT_GRACE_SECONDS) / HEARTBEAT_INTERVAL_SECONDS)
     );
     const heartbeats = sessionData.heartbeat_count ?? 0;
     if (expectedHeartbeats > 0 && heartbeats < Math.ceil(expectedHeartbeats * 0.5)) {
       console.warn(
         `Insufficient heartbeats from user ${user.id}: got ${heartbeats}, expected ~${expectedHeartbeats} for ${sessionAge}s session`
       );
-      return jsonResponse({ error: "Invalid game session" }, 400);
+      return jsonResponse({ error: "Invalid game session" }, 400, origin);
     }
 
-    await adminClient
-      .from("game_sessions")
-      .update({ completed: true })
-      .eq("id", session_id);
+    if (sessionData.last_heartbeat_at) {
+      const heartbeatStalenessSeconds =
+        (Date.now() - new Date(sessionData.last_heartbeat_at).getTime()) / 1000;
+      if (heartbeatStalenessSeconds > MAX_HEARTBEAT_STALENESS_SECONDS) {
+        console.warn(
+          `Stale heartbeat from user ${user.id}: ${heartbeatStalenessSeconds}s`
+        );
+        return jsonResponse({ error: "Invalid game session" }, 400, origin);
+      }
+    } else if (expectedHeartbeats > 0) {
+      console.warn(
+        `Missing heartbeat timestamp from user ${user.id} for ${sessionAge}s session`
+      );
+      return jsonResponse({ error: "Invalid game session" }, 400, origin);
+    }
 
     const { data: recent } = await adminClient
       .from("scores")
@@ -243,13 +322,38 @@ Deno.serve(async (req: Request) => {
         console.warn(
           `Rate limited user ${user.id}: ${elapsed}s since last score`
         );
-        return jsonResponse({ error: "Too many requests" }, 429);
+        return jsonResponse({ error: "Too many requests" }, 429, origin);
       }
+    }
+
+    const { data: claimedSession, error: claimError } = await adminClient
+      .from("game_sessions")
+      .update({ completed: true })
+      .eq("id", session_id)
+      .eq("user_id", user.id)
+      .eq("token", token)
+      .eq("completed", false)
+      .select("id")
+      .maybeSingle();
+
+    if (claimError) {
+      console.error(
+        `Failed to claim game session for user ${user.id}:`,
+        claimError.message
+      );
+      return jsonResponse({ error: "Failed to save score" }, 500, origin);
+    }
+
+    if (!claimedSession) {
+      console.warn(
+        `Replay or already completed session for user ${user.id}: session_id=${session_id}`
+      );
+      return jsonResponse({ error: "Invalid game session" }, 400, origin);
     }
 
     const { data, error } = await adminClient
       .from("scores")
-      .insert({ user_id: user.id, score, level, lines })
+      .insert({ user_id: user.id, score, level, lines, session_id })
       .select()
       .single();
 
@@ -258,15 +362,15 @@ Deno.serve(async (req: Request) => {
         `Failed to insert score for user ${user.id}:`,
         error.message
       );
-      return jsonResponse({ error: "Failed to save score" }, 500);
+      return jsonResponse({ error: "Failed to save score" }, 500, origin);
     }
 
     console.info(
       `Score saved for user ${user.id}: score=${score}, level=${level}, lines=${lines}, duration=${sessionAge}s`
     );
-    return jsonResponse(data as Record<string, unknown>, 200);
+    return jsonResponse(data as Record<string, unknown>, 200, origin);
   } catch (err) {
     console.error("Unexpected error in submit-score:", err);
-    return jsonResponse({ error: "Internal server error" }, 500);
+    return jsonResponse({ error: "Internal server error" }, 500, origin);
   }
 });

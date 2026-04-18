@@ -62,14 +62,24 @@ supabase/
 
 - **Row Level Security** on every table; policies scoped to `auth.uid()`.
 - **Score writes** restricted to the `service_role` key -- only edge functions can insert scores, never the browser.
+- **JWT gateway enforcement** enabled for score-related edge functions (`verify_jwt=true`).
+- **CORS allowlist** enforced in edge functions (localhost + production domain + optional `ALLOWED_ORIGINS` secret override).
 - **Anti-cheat pipeline** in `submit-score`:
   - Session token must match.
   - Session must be at least 10 s old.
+  - Session must not exceed max lifetime (2 h).
   - Minimum play time scales with lines cleared (1.5 s per line).
   - Score must fall within `[computeMinScore, computeMaxScore]` for the given lines.
   - Level must be consistent with `floor(lines / 10) + 1`.
   - At least 50 % of expected heartbeats must have been received.
+  - Last heartbeat timestamp must be fresh.
+  - Session is atomically claimed before insert (replay-resistant).
   - Rate-limited to one score every 5 s.
+- **DB integrity checks**:
+  - `scores.session_id` is unique (one score per session).
+  - Trigger validates `session_id -> user_id` ownership and completed session state.
+
+See [SECURITY_THREAT_MODEL.md](SECURITY_THREAT_MODEL.md) for the full threat model.
 
 ---
 
@@ -206,6 +216,16 @@ npm run build
 ```
 
 If you migrated from Bolt, make sure your Supabase keys were re-added locally. Bolt environment variables are not transferred automatically to your machine.
+
+### Edge Function Secrets (Supabase)
+
+Set this secret in your Supabase project for production domain control:
+
+```
+ALLOWED_ORIGINS=https://sb1-wmjgmeyv.bolt.new
+```
+
+You can provide multiple origins as comma-separated values.
 
 ---
 

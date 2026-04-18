@@ -1,17 +1,60 @@
+// @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
+  "https://sb1-wmjgmeyv.bolt.new",
+];
 
-function jsonResponse(body: Record<string, unknown>, status: number) {
+function normalizeOrigin(origin: string): string {
+  return origin.replace(/\/+$/, "");
+}
+
+function buildAllowedOrigins(): Set<string> {
+  const configured = Deno.env.get("ALLOWED_ORIGINS") ?? "";
+  const merged = [...DEFAULT_ALLOWED_ORIGINS, ...configured.split(",")];
+
+  return new Set(
+    merged
+      .map((origin) => normalizeOrigin(origin.trim()))
+      .filter((origin) => origin.length > 0)
+  );
+}
+
+const allowedOrigins = buildAllowedOrigins();
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return true;
+  return allowedOrigins.has(normalizeOrigin(origin));
+}
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Client-Info, Apikey",
+    "Vary": "Origin",
+  };
+
+  if (origin && isAllowedOrigin(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+}
+
+function jsonResponse(
+  body: Record<string, unknown>,
+  status: number,
+  origin: string | null
+) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 }
 
@@ -26,12 +69,22 @@ function generateToken(): string {
 const MAX_ACTIVE_SESSIONS = 3;
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("Origin");
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    if (!isAllowedOrigin(origin)) {
+      return jsonResponse({ error: "Origin not allowed" }, 403, origin);
+    }
+
+    return new Response(null, { status: 200, headers: corsHeaders(origin) });
+  }
+
+  if (!isAllowedOrigin(origin)) {
+    return jsonResponse({ error: "Origin not allowed" }, 403, origin);
   }
 
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
+    return jsonResponse({ error: "Method not allowed" }, 405, origin);
   }
 
   try {
@@ -41,12 +94,12 @@ Deno.serve(async (req: Request) => {
 
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
       console.error("Missing required environment variables");
-      return jsonResponse({ error: "Server configuration error" }, 500);
+      return jsonResponse({ error: "Server configuration error" }, 500, origin);
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Missing authorization" }, 401);
+      return jsonResponse({ error: "Missing authorization" }, 401, origin);
     }
 
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -58,7 +111,7 @@ Deno.serve(async (req: Request) => {
       error: authError,
     } = await userClient.auth.getUser();
     if (authError || !user) {
-      return jsonResponse({ error: "Authentication failed" }, 401);
+      return jsonResponse({ error: "Authentication failed" }, 401, origin);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -81,7 +134,7 @@ Deno.serve(async (req: Request) => {
 
     if (count !== null && count >= MAX_ACTIVE_SESSIONS) {
       console.warn(`Too many active sessions for user ${user.id}: ${count}`);
-      return jsonResponse({ error: "Too many active sessions" }, 429);
+      return jsonResponse({ error: "Too many active sessions" }, 429, origin);
     }
 
     const token = generateToken();
@@ -97,13 +150,13 @@ Deno.serve(async (req: Request) => {
         `Failed to create game session for user ${user.id}:`,
         error.message
       );
-      return jsonResponse({ error: "Failed to start game session" }, 500);
+      return jsonResponse({ error: "Failed to start game session" }, 500, origin);
     }
 
     console.info(`Game session started for user ${user.id}: ${data.id}`);
-    return jsonResponse(data as Record<string, unknown>, 200);
+    return jsonResponse(data as Record<string, unknown>, 200, origin);
   } catch (err) {
     console.error("Unexpected error in start-game:", err);
-    return jsonResponse({ error: "Internal server error" }, 500);
+    return jsonResponse({ error: "Internal server error" }, 500, origin);
   }
 });
