@@ -31,12 +31,11 @@ export function GamePage() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="min-h-[calc(100vh-64px)]"
+      className="lg:min-h-[calc(100vh-64px)]"
     >
-      {/* Mobile layout: navbar=48px, statsRow=72px, button=36px, gaps+padding=28px = 184px overhead */}
-      <div className="lg:hidden flex flex-col items-center h-[calc(100dvh-48px)] sm:h-[calc(100dvh-64px)] px-2 py-2 gap-1.5 overflow-hidden">
-        <div className="shrink-0 w-full flex gap-1.5 items-stretch">
-          <div className="flex-1 flex gap-1.5 min-w-0">
+      <div className="lg:hidden flex flex-col h-[calc(100dvh-48px)] sm:h-[calc(100dvh-64px)] px-2 py-1.5 gap-1 overflow-hidden">
+        <div className="shrink-0 flex gap-1 items-stretch">
+          <div className="flex-1 flex gap-1 min-w-0">
             <GameStats score={state.score} level={state.level} lines={state.lines} orientation="horizontal" />
           </div>
           <div className="shrink-0">
@@ -44,38 +43,32 @@ export function GamePage() {
           </div>
         </div>
 
-        <div
-          className="relative mx-auto"
-          style={{
-            height: 'calc(100dvh - 48px - 72px - 36px - 28px)',
-            maxHeight: 'calc((100vw - 16px) * 2)',
-            aspectRatio: '10 / 20',
-            maxWidth: 'calc(100vw - 16px)',
-          }}
-        >
-          <Board
-            board={state.board}
-            current={state.current}
-            clearedRows={state.clearedRows}
-          />
-          <GameOverlay
-            status={state.status}
-            score={state.score}
-            onStart={handleStart}
-            onResume={resume}
-          />
+        <div className="flex-1 min-h-0 flex justify-center">
+          <div className="relative h-full" style={{ aspectRatio: '10 / 20' }}>
+            <Board
+              board={state.board}
+              current={state.current}
+              clearedRows={state.clearedRows}
+            />
+            <GameOverlay
+              status={state.status}
+              score={state.score}
+              onStart={handleStart}
+              onResume={resume}
+            />
+          </div>
         </div>
 
-        <div className="shrink-0 w-full max-w-xs h-9">
+        <div className="shrink-0 flex justify-center h-8">
           {state.status === 'playing' && (
-            <Button variant="secondary" size="sm" onClick={pause} className="w-full gap-1.5">
-              <Pause className="w-3.5 h-3.5" />
+            <Button variant="secondary" size="sm" onClick={pause} className="w-full max-w-xs gap-1.5 h-8 text-xs">
+              <Pause className="w-3 h-3" />
               Pause
             </Button>
           )}
           {state.status === 'paused' && (
-            <Button variant="secondary" size="sm" onClick={resume} className="w-full gap-1.5">
-              <Play className="w-3.5 h-3.5" />
+            <Button variant="secondary" size="sm" onClick={resume} className="w-full max-w-xs gap-1.5 h-8 text-xs">
+              <Play className="w-3 h-3" />
               Resume
             </Button>
           )}
