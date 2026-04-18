@@ -12,7 +12,7 @@
 |---|---|
 | Framework | React 18 + TypeScript |
 | Build | Vite 5 |
-| Styling | Tailwind CSS 3 |
+| Styling | Tailwind CSS 4 |
 | Animations | Framer Motion |
 | Icons | Lucide React |
 | Routing | React Router 7 |
@@ -184,19 +184,28 @@ The `clearedRows` array is converted to a `Set` via `useMemo` to give O(1) looku
 
 ---
 
-## Local Development
+## Local Development (VS Code)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Environment variables are read from `.env`:
+Create a `.env` file in the project root (you can copy from `.env.example`):
 
 ```
 VITE_SUPABASE_URL=<your-supabase-url>
 VITE_SUPABASE_ANON_KEY=<your-anon-key>
 ```
+
+Then run the production checks:
+
+```bash
+npm run typecheck
+npm run build
+```
+
+If you migrated from Bolt, make sure your Supabase keys were re-added locally. Bolt environment variables are not transferred automatically to your machine.
 
 ---
 

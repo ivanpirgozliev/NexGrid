@@ -1,48 +1,89 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export type Database = {
   public: {
     Tables: {
-      profiles: {
+      game_sessions: {
         Row: {
-          id: string;
-          username: string;
+          completed: boolean;
           created_at: string;
+          heartbeat_count: number;
+          id: string;
+          last_heartbeat_at: string | null;
+          started_at: string;
+          token: string;
+          user_id: string;
         };
         Insert: {
-          id: string;
-          username: string;
+          completed?: boolean;
           created_at?: string;
+          heartbeat_count?: number;
+          id?: string;
+          last_heartbeat_at?: string | null;
+          started_at?: string;
+          token?: string;
+          user_id: string;
         };
         Update: {
+          completed?: boolean;
+          created_at?: string;
+          heartbeat_count?: number;
+          id?: string;
+          last_heartbeat_at?: string | null;
+          started_at?: string;
+          token?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      profiles: {
+        Row: {
+          created_at: string | null;
+          id: string;
+          username: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          id: string;
+          username?: string;
+        };
+        Update: {
+          created_at?: string | null;
           id?: string;
           username?: string;
-          created_at?: string;
         };
         Relationships: [];
       };
       scores: {
         Row: {
+          created_at: string | null;
           id: string;
-          user_id: string;
-          score: number;
           level: number;
           lines: number;
-          created_at: string;
+          score: number;
+          user_id: string;
         };
         Insert: {
+          created_at?: string | null;
           id?: string;
-          user_id: string;
-          score: number;
-          level: number;
-          lines: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          score?: number;
           level?: number;
           lines?: number;
-          created_at?: string;
+          score?: number;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string;
+          level?: number;
+          lines?: number;
+          score?: number;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -50,17 +91,30 @@ export type Database = {
     Views: {
       leaderboard: {
         Row: {
-          user_id: string;
-          username: string;
-          best_score: number;
-          best_level: number;
-          games_played: number;
+          created_at: string | null;
+          level: number | null;
+          lines: number | null;
+          score: number | null;
+          score_id: string | null;
+          user_id: string | null;
+          username: string | null;
         };
         Relationships: [];
       };
     };
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
+    Functions: {
+      get_user_stats: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 };

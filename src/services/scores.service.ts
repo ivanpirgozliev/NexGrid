@@ -4,6 +4,20 @@ import type { Score, LeaderboardEntry, UserStats } from '../types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+function toUserStats(value: unknown): UserStats {
+  if (!value || typeof value !== 'object') {
+    return { games_played: 0, avg_score: 0, best_streak: 0 };
+  }
+
+  const data = value as Record<string, unknown>;
+
+  return {
+    games_played: Number(data.games_played ?? 0),
+    avg_score: Number(data.avg_score ?? 0),
+    best_streak: Number(data.best_streak ?? 0),
+  };
+}
+
 async function getAuthHeaders() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
@@ -87,6 +101,6 @@ export const scoresService = {
       p_user_id: userId,
     });
     if (error) throw error;
-    return data as UserStats;
+    return toUserStats(data);
   },
 };
