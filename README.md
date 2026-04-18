@@ -1,11 +1,5 @@
 # Tetris
 
-A browser-based Tetris clone with real-time leaderboards, player profiles, and server-side anti-cheat -- built with React, TypeScript, and Supabase.
-
-[![Open in Bolt](https://bolt.new/static/open-in-bolt.svg)](https://bolt.new/~/sb1-wmjgmeyv)
-
----
-
 ## Demo
 
 **Live:** [https://sb1-wmjgmeyv.bolt.new](https://sb1-wmjgmeyv.bolt.new)
