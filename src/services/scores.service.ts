@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Score, LeaderboardEntry } from '../types';
+import type { Score, LeaderboardEntry, UserStats } from '../types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -80,5 +80,13 @@ export const scoresService = {
       .limit(100);
     if (error) throw error;
     return (data ?? []) as LeaderboardEntry[];
+  },
+
+  async getUserStats(userId: string): Promise<UserStats> {
+    const { data, error } = await supabase.rpc('get_user_stats', {
+      p_user_id: userId,
+    });
+    if (error) throw error;
+    return data as UserStats;
   },
 };

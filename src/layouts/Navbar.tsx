@@ -1,16 +1,15 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Gamepad2, Trophy, LogOut, User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAuthContext } from '../features/auth/context/AuthContext';
 import { authService } from '../services/auth.service';
 
 const navLinks = [
   { to: '/game', label: 'Play', icon: Gamepad2 },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { to: '/profile', label: 'Profile', icon: User },
 ];
 
 export function Navbar() {
-  const { username } = useAuthContext();
   const navigate = useNavigate();
 
   async function handleSignOut() {
@@ -53,12 +52,6 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-3">
-          {username && (
-            <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-gray-900 border border-gray-800 max-w-[120px] sm:max-w-none">
-              <User className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-500 shrink-0" />
-              <span className="text-gray-300 text-xs sm:text-sm font-medium truncate">{username}</span>
-            </div>
-          )}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-red-400 hover:bg-red-950/20 transition-colors shrink-0"

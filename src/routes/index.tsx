@@ -5,6 +5,7 @@ import { AuthProvider } from '../features/auth/context/AuthContext';
 import { AuthPage } from '../features/auth/pages/AuthPage';
 import { GamePage } from '../features/tetris/pages/GamePage';
 import { LeaderboardPage } from '../features/leaderboard/pages/LeaderboardPage';
+import { ProfilePage } from '../features/profile/pages/ProfilePage';
 
 function AuthLayout() {
   return (
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
               {
                 path: 'leaderboard',
                 element: <LeaderboardPage />,
+              },
+              {
+                path: 'profile',
+                element: <ProfilePage />,
               },
             ],
           },

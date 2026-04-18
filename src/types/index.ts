@@ -24,3 +24,9 @@ export interface LeaderboardEntry {
   lines: number;
   created_at: string;
 }
+
+export interface UserStats {
+  games_played: number;
+  avg_score: number;
+  best_streak: number;
+}
