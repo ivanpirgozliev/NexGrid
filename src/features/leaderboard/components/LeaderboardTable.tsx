@@ -53,26 +53,26 @@ export const LeaderboardTable = memo(function LeaderboardTable({
 }: LeaderboardTableProps) {
   return (
     <div className="rounded-xl border border-gray-800 overflow-hidden">
-      <div className="h-[506px] overflow-y-auto scrollbar-hide">
+      <div className="h-[516px] overflow-y-auto scrollbar-hide">
         <table className="w-full table-fixed">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-gray-800 bg-gray-900/95 backdrop-blur">
-              <th className="px-4 h-9 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">
+              <th className="px-4 h-[46px] text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">
                 #
               </th>
-              <th className="px-4 h-9 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="px-4 h-[46px] text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Player
               </th>
-              <th className="px-4 h-9 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
+              <th className="px-4 h-[46px] text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
                 Score
               </th>
-              <th className="px-4 h-9 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell w-16">
+              <th className="px-4 h-[46px] text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell w-16">
                 Level
               </th>
-              <th className="px-4 h-9 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell w-16">
+              <th className="px-4 h-[46px] text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell w-16">
                 Lines
               </th>
-              <th className="px-4 h-9 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell w-28">
+              <th className="px-4 h-[46px] text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell w-28">
                 Date
               </th>
             </tr>
