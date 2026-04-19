@@ -6,6 +6,8 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://127.0.0.1:5173",
   "http://localhost:5174",
   "http://127.0.0.1:5174",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
 ];
 
 function normalizeOrigin(origin: string): string {
@@ -14,7 +16,14 @@ function normalizeOrigin(origin: string): string {
 
 function buildAllowedOrigins(): Set<string> {
   const configured = Deno.env.get("ALLOWED_ORIGINS") ?? "";
-  const merged = [...DEFAULT_ALLOWED_ORIGINS, ...configured.split(",")];
+  const siteUrl = Deno.env.get("SITE_URL") ?? "";
+  const appUrl = Deno.env.get("APP_URL") ?? "";
+  const merged = [
+    ...DEFAULT_ALLOWED_ORIGINS,
+    ...configured.split(","),
+    siteUrl,
+    appUrl,
+  ];
 
   return new Set(
     merged
@@ -58,30 +67,40 @@ function jsonResponse(
 
 const LINE_POINTS = [0, 100, 300, 500, 800];
 
-function computeMaxScore(lines: number): number {
-  if (lines <= 0) return 0;
-  let total = 0;
-  let currentLines = 0;
-  while (currentLines < lines) {
-    const currentLevel = Math.floor(currentLines / 10) + 1;
-    const remaining = lines - currentLines;
-    const batch = Math.min(4, remaining);
-    total += (LINE_POINTS[batch] ?? 0) * currentLevel;
-    currentLines += batch;
+function computeScoreBounds(lines: number): { min: number; max: number } {
+  if (lines <= 0) {
+    return { min: 0, max: 0 };
   }
-  return total;
-}
 
-function computeMinScore(lines: number): number {
-  if (lines <= 0) return 0;
-  let total = 0;
-  let currentLines = 0;
-  while (currentLines < lines) {
-    const currentLevel = Math.floor(currentLines / 10) + 1;
-    total += LINE_POINTS[1] * currentLevel;
-    currentLines += 1;
+  const minScores = Array<number>(lines + 1).fill(Number.POSITIVE_INFINITY);
+  const maxScores = Array<number>(lines + 1).fill(Number.NEGATIVE_INFINITY);
+  minScores[0] = 0;
+  maxScores[0] = 0;
+
+  for (let clearedTotal = 0; clearedTotal < lines; clearedTotal += 1) {
+    for (let clearCount = 1; clearCount <= 4; clearCount += 1) {
+      const nextTotal = clearedTotal + clearCount;
+      if (nextTotal > lines) continue;
+
+      // Game scoring uses the level after lines are added.
+      const nextLevel = Math.floor(nextTotal / 10) + 1;
+      const gainedScore = (LINE_POINTS[clearCount] ?? 0) * nextLevel;
+
+      minScores[nextTotal] = Math.min(
+        minScores[nextTotal],
+        minScores[clearedTotal] + gainedScore
+      );
+      maxScores[nextTotal] = Math.max(
+        maxScores[nextTotal],
+        maxScores[clearedTotal] + gainedScore
+      );
+    }
   }
-  return total;
+
+  return {
+    min: minScores[lines],
+    max: maxScores[lines],
+  };
 }
 
 const RATE_LIMIT_SECONDS = 5;
@@ -186,7 +205,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid score data" }, 400, origin);
     }
 
-    const maxScore = computeMaxScore(lines);
+    const { min: minScore, max: maxScore } = computeScoreBounds(lines);
     if (score > maxScore) {
       console.warn(
         `Score exceeds max from user ${user.id}: score=${score}, max=${maxScore}, lines=${lines}`
@@ -194,14 +213,11 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid score data" }, 400, origin);
     }
 
-    if (lines > 0) {
-      const minScore = computeMinScore(lines);
-      if (score < minScore) {
-        console.warn(
-          `Score below minimum from user ${user.id}: score=${score}, min=${minScore}, lines=${lines}`
-        );
-        return jsonResponse({ error: "Invalid score data" }, 400, origin);
-      }
+    if (lines > 0 && score < minScore) {
+      console.warn(
+        `Score below minimum from user ${user.id}: score=${score}, min=${minScore}, lines=${lines}`
+      );
+      return jsonResponse({ error: "Invalid score data" }, 400, origin);
     }
 
     const { token } = body as Record<string, unknown>;

@@ -6,6 +6,8 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://127.0.0.1:5173",
   "http://localhost:5174",
   "http://127.0.0.1:5174",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
 ];
 
 function normalizeOrigin(origin: string): string {
@@ -14,7 +16,14 @@ function normalizeOrigin(origin: string): string {
 
 function buildAllowedOrigins(): Set<string> {
   const configured = Deno.env.get("ALLOWED_ORIGINS") ?? "";
-  const merged = [...DEFAULT_ALLOWED_ORIGINS, ...configured.split(",")];
+  const siteUrl = Deno.env.get("SITE_URL") ?? "";
+  const appUrl = Deno.env.get("APP_URL") ?? "";
+  const merged = [
+    ...DEFAULT_ALLOWED_ORIGINS,
+    ...configured.split(","),
+    siteUrl,
+    appUrl,
+  ];
 
   return new Set(
     merged

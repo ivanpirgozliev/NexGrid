@@ -18,14 +18,47 @@ function toUserStats(value: unknown): UserStats {
   };
 }
 
+async function getAccessToken(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+
+  let session = data.session;
+  const expiresAt = session?.expires_at ? session.expires_at * 1000 : 0;
+
+  // Refresh shortly before expiry to avoid edge-function 401 responses.
+  if (session && expiresAt > 0 && expiresAt - Date.now() < 60_000) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) throw refreshError;
+    session = refreshed.session ?? session;
+  }
+
+  if (!session?.access_token) {
+    throw new Error('Not authenticated');
+  }
+
+  return session.access_token;
+}
+
 async function getAuthHeaders() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not authenticated');
+  const accessToken = await getAccessToken();
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${session.access_token}`,
+    'Authorization': `Bearer ${accessToken}`,
     'Apikey': SUPABASE_ANON_KEY,
   };
+}
+
+async function readFunctionError(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: unknown };
+    if (typeof body.error === 'string' && body.error.length > 0) {
+      return body.error;
+    }
+  } catch {
+    // Ignore non-JSON response bodies.
+  }
+
+  return fallback;
 }
 
 export interface GameSession {
@@ -42,8 +75,7 @@ export const scoresService = {
     });
 
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to start game session');
+      throw new Error(await readFunctionError(res, 'Failed to start game session'));
     }
 
     const data = await res.json();
@@ -68,8 +100,7 @@ export const scoresService = {
     });
 
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to save score');
+      throw new Error(await readFunctionError(res, 'Failed to save score'));
     }
 
     return res.json();

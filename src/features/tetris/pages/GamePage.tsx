@@ -12,8 +12,11 @@ import { Button } from '../../../components/ui/Button';
 
 export function GamePage() {
   const { state, start, pause, resume } = useTetris();
-  const isActive = state.status === 'playing' || state.status === 'clearing';
-  const { saveScore, resetSaved, startSession } = useSaveScore(isActive);
+  const isActive =
+    state.status === 'playing' ||
+    state.status === 'clearing' ||
+    state.status === 'paused';
+  const { saveScore, resetSaved, startSession, saveError } = useSaveScore(isActive);
 
   useEffect(() => {
     if (state.status === 'over' && state.score > 0) {
@@ -23,7 +26,11 @@ export function GamePage() {
 
   async function handleStart() {
     resetSaved();
-    await startSession();
+    const sessionStarted = await startSession();
+    if (!sessionStarted) {
+      return;
+    }
+
     start();
   }
 
@@ -34,6 +41,12 @@ export function GamePage() {
       transition={{ duration: 0.35 }}
       className=""
     >
+      {saveError && (
+        <div className="mx-auto mb-2 max-w-[840px] rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+          {saveError}
+        </div>
+      )}
+
       <div className="lg:hidden flex flex-col h-[calc(100dvh-48px)] sm:h-[calc(100dvh-64px)] px-2 py-1.5 gap-1 overflow-hidden">
         <div className="shrink-0 flex gap-1 items-stretch">
           <div className="flex-1 flex gap-1 min-w-0">
