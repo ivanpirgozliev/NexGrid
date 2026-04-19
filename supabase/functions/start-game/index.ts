@@ -8,13 +8,17 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://127.0.0.1:5174",
   "http://localhost:4173",
   "http://127.0.0.1:4173",
+  "https://ivanigorzilevetetris.netlify.app",
+  "https://*.netlify.app",
 ];
+
+type OriginMatcher = (origin: string) => boolean;
 
 function normalizeOrigin(origin: string): string {
   return origin.replace(/\/+$/, "");
 }
 
-function buildAllowedOrigins(): Set<string> {
+function buildAllowedOriginMatchers(): OriginMatcher[] {
   const configured = Deno.env.get("ALLOWED_ORIGINS") ?? "";
   const siteUrl = Deno.env.get("SITE_URL") ?? "";
   const appUrl = Deno.env.get("APP_URL") ?? "";
@@ -25,18 +29,29 @@ function buildAllowedOrigins(): Set<string> {
     appUrl,
   ];
 
-  return new Set(
-    merged
-      .map((origin) => normalizeOrigin(origin.trim()))
-      .filter((origin) => origin.length > 0)
-  );
+  const origins = merged
+    .map((origin) => normalizeOrigin(origin.trim()))
+    .filter((origin) => origin.length > 0);
+
+  return origins.map((allowed) => {
+    if (!allowed.includes("*")) {
+      return (origin: string) => origin === allowed;
+    }
+
+    const pattern = allowed
+      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/\*/g, ".*");
+    const regex = new RegExp(`^${pattern}$`);
+    return (origin: string) => regex.test(origin);
+  });
 }
 
-const allowedOrigins = buildAllowedOrigins();
+const allowedOriginMatchers = buildAllowedOriginMatchers();
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return true;
-  return allowedOrigins.has(normalizeOrigin(origin));
+  const normalized = normalizeOrigin(origin);
+  return allowedOriginMatchers.some((matchOrigin) => matchOrigin(normalized));
 }
 
 function corsHeaders(origin: string | null): Record<string, string> {
