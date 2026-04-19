@@ -4,6 +4,7 @@ import { Pause, Play } from 'lucide-react';
 import { useTetris } from '../hooks/useTetris';
 import { useSaveScore } from '../hooks/useSaveScore';
 import { useGameAudio } from '../hooks/useGameAudio';
+import { AudioControls } from '../components/AudioControls';
 import { Board } from '../components/Board';
 import { GameStats } from '../components/GameStats';
 import { NextPiece } from '../components/NextPiece';
@@ -13,6 +14,45 @@ import { ScoreFlyEffect, type ScoreFlight } from '../components/ScoreFlyEffect';
 import { Button } from '../../../components/ui/Button';
 
 const BOARD_ROWS = 20;
+const AUDIO_PREFS_KEY = 'tetris_audio_prefs_v1';
+
+interface AudioPrefs {
+  masterVolume: number;
+  effectsVolume: number;
+  muted: boolean;
+}
+
+const DEFAULT_AUDIO_PREFS: AudioPrefs = {
+  masterVolume: 0.8,
+  effectsVolume: 0.9,
+  muted: false,
+};
+
+function clampVolume(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function readAudioPrefs(): AudioPrefs {
+  if (typeof window === 'undefined') {
+    return DEFAULT_AUDIO_PREFS;
+  }
+
+  const raw = window.localStorage.getItem(AUDIO_PREFS_KEY);
+  if (!raw) {
+    return DEFAULT_AUDIO_PREFS;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AudioPrefs>;
+    return {
+      masterVolume: clampVolume(parsed.masterVolume ?? DEFAULT_AUDIO_PREFS.masterVolume),
+      effectsVolume: clampVolume(parsed.effectsVolume ?? DEFAULT_AUDIO_PREFS.effectsVolume),
+      muted: parsed.muted ?? DEFAULT_AUDIO_PREFS.muted,
+    };
+  } catch {
+    return DEFAULT_AUDIO_PREFS;
+  }
+}
 
 function pickVisibleElement<T extends HTMLElement>(first: T | null, second: T | null): T | null {
   if (first && first.offsetParent !== null) {
@@ -28,11 +68,13 @@ function pickVisibleElement<T extends HTMLElement>(first: T | null, second: T | 
 
 export function GamePage() {
   const { state, start, pause, resume } = useTetris();
-  const { playLineClear, playScoreCollect, playLevelUp } = useGameAudio();
+  const [audioPrefs, setAudioPrefs] = useState<AudioPrefs>(() => readAudioPrefs());
+  const { playLineClear, playScoreCollect, playLevelUp } = useGameAudio(audioPrefs);
   const isActive =
     state.status === 'playing' ||
     state.status === 'clearing' ||
     state.status === 'paused';
+  const canPause = state.status === 'playing' || state.status === 'clearing';
   const { saveScore, resetSaved, startSession, saveError } = useSaveScore(isActive);
 
   const [displayScore, setDisplayScore] = useState(state.score);
@@ -49,6 +91,14 @@ export function GamePage() {
   const prevLinesRef = useRef(state.lines);
   const prevLevelRef = useRef(state.level);
   const flightIdRef = useRef(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(AUDIO_PREFS_KEY, JSON.stringify(audioPrefs));
+  }, [audioPrefs]);
 
   useEffect(() => {
     if (state.status === 'over' && state.score > 0) {
@@ -151,6 +201,31 @@ export function GamePage() {
     [playScoreCollect]
   );
 
+  const handleToggleMute = useCallback(() => {
+    setAudioPrefs((prev) => ({
+      ...prev,
+      muted: !prev.muted,
+    }));
+  }, []);
+
+  const handleMasterVolumeChange = useCallback((value: number) => {
+    const nextValue = clampVolume(value);
+    setAudioPrefs((prev) => ({
+      ...prev,
+      masterVolume: nextValue,
+      muted: prev.muted && nextValue > 0 ? false : prev.muted,
+    }));
+  }, []);
+
+  const handleEffectsVolumeChange = useCallback((value: number) => {
+    const nextValue = clampVolume(value);
+    setAudioPrefs((prev) => ({
+      ...prev,
+      effectsVolume: nextValue,
+      muted: prev.muted && nextValue > 0 ? false : prev.muted,
+    }));
+  }, []);
+
   async function handleStart() {
     resetSaved();
     const sessionStarted = await startSession();
@@ -215,19 +290,31 @@ export function GamePage() {
           </div>
         </div>
 
-        <div className="shrink-0 flex justify-center h-8">
-          {isActive && (
-            <Button variant="secondary" size="sm" onClick={pause} className="w-full max-w-xs gap-1.5 h-8 text-xs">
-              <Pause className="w-3 h-3" />
-              Pause
-            </Button>
-          )}
-          {state.status === 'paused' && (
-            <Button variant="secondary" size="sm" onClick={resume} className="w-full max-w-xs gap-1.5 h-8 text-xs">
-              <Play className="w-3 h-3" />
-              Resume
-            </Button>
-          )}
+        <div className="shrink-0 flex flex-col gap-1.5">
+          <div className="flex justify-center h-8">
+            {canPause && (
+              <Button variant="secondary" size="sm" onClick={pause} className="w-full max-w-xs gap-1.5 h-8 text-xs">
+                <Pause className="w-3 h-3" />
+                Pause
+              </Button>
+            )}
+            {state.status === 'paused' && (
+              <Button variant="secondary" size="sm" onClick={resume} className="w-full max-w-xs gap-1.5 h-8 text-xs">
+                <Play className="w-3 h-3" />
+                Resume
+              </Button>
+            )}
+          </div>
+
+          <AudioControls
+            compact
+            muted={audioPrefs.muted}
+            masterVolume={audioPrefs.masterVolume}
+            effectsVolume={audioPrefs.effectsVolume}
+            onToggleMute={handleToggleMute}
+            onMasterVolumeChange={handleMasterVolumeChange}
+            onEffectsVolumeChange={handleEffectsVolumeChange}
+          />
         </div>
       </div>
 
@@ -260,7 +347,7 @@ export function GamePage() {
         <div className="flex flex-col gap-3 w-48">
           <NextPiece type={state.next} />
 
-          {isActive && (
+          {canPause && (
             <Button variant="secondary" size="sm" onClick={pause} className="w-full gap-1.5">
               <Pause className="w-3.5 h-3.5" />
               Pause
@@ -272,6 +359,15 @@ export function GamePage() {
               Resume
             </Button>
           )}
+
+          <AudioControls
+            muted={audioPrefs.muted}
+            masterVolume={audioPrefs.masterVolume}
+            effectsVolume={audioPrefs.effectsVolume}
+            onToggleMute={handleToggleMute}
+            onMasterVolumeChange={handleMasterVolumeChange}
+            onEffectsVolumeChange={handleEffectsVolumeChange}
+          />
 
           <Controls />
         </div>

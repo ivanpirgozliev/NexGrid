@@ -10,6 +10,12 @@ type Tone = {
   type?: OscillatorType;
 };
 
+interface GameAudioOptions {
+  masterVolume?: number;
+  effectsVolume?: number;
+  muted?: boolean;
+}
+
 type BrowserWindow = Window & {
   webkitAudioContext?: AudioCtor;
 };
@@ -50,8 +56,16 @@ function playTone(ctx: AudioContext, startAt: number, tone: Tone) {
   oscillator.stop(endedAt + 0.01);
 }
 
-export function useGameAudio() {
+function clampVolume(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+export function useGameAudio(options?: GameAudioOptions) {
   const contextRef = useRef<AudioContext | null>(null);
+
+  const masterVolume = clampVolume(options?.masterVolume ?? 1);
+  const effectsVolume = clampVolume(options?.effectsVolume ?? 1);
+  const muted = options?.muted ?? false;
 
   const ensureContext = useCallback((): AudioContext | null => {
     const Ctor = getAudioContextCtor();
@@ -77,10 +91,18 @@ export function useGameAudio() {
         return;
       }
 
+      const volumeScale = muted ? 0 : masterVolume * effectsVolume;
+      if (volumeScale <= 0.001) {
+        return;
+      }
+
       const startAt = ctx.currentTime + 0.01;
-      tones.forEach((tone) => playTone(ctx, startAt, tone));
+      tones.forEach((tone) => playTone(ctx, startAt, {
+        ...tone,
+        gain: (tone.gain ?? 0.07) * volumeScale,
+      }));
     },
-    [ensureContext]
+    [ensureContext, effectsVolume, masterVolume, muted]
   );
 
   const playLineClear = useCallback(
