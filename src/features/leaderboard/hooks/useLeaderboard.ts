@@ -10,6 +10,15 @@ export function useLeaderboard() {
   });
 }
 
+export function useLeaderboardStats() {
+  return useQuery({
+    queryKey: ['leaderboardStats'],
+    queryFn: scoresService.getPublicGameStats,
+    staleTime: 1000 * 20,
+    refetchInterval: 1000 * 20,
+  });
+}
+
 export function useUserScores() {
   const { user } = useAuthContext();
   return useQuery({

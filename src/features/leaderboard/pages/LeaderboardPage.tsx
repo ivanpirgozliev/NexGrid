@@ -1,12 +1,19 @@
 import { motion } from 'framer-motion';
-import { Trophy, RefreshCw } from 'lucide-react';
-import { useLeaderboard } from '../hooks/useLeaderboard';
+import { Trophy, RefreshCw, Users, Wifi } from 'lucide-react';
+import { useLeaderboard, useLeaderboardStats } from '../hooks/useLeaderboard';
 import { LeaderboardTable } from '../components/LeaderboardTable';
 import { Button } from '../../../components/ui/Button';
 import { useAuthContext } from '../../auth/context/AuthContext';
 
 export function LeaderboardPage() {
   const { data, isLoading, isError, refetch, isFetching } = useLeaderboard();
+  const {
+    data: gameStats,
+    isLoading: isStatsLoading,
+    isError: isStatsError,
+    refetch: refetchStats,
+    isFetching: isStatsFetching,
+  } = useLeaderboardStats();
   const { user } = useAuthContext();
 
   return (
@@ -14,9 +21,9 @@ export function LeaderboardPage() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="max-w-[840px] mx-auto px-4 py-10"
+      className="max-w-[840px] mx-auto px-4 py-4 sm:py-5"
     >
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
             <Trophy className="w-5 h-5 text-yellow-400" />
@@ -29,14 +36,43 @@ export function LeaderboardPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => refetch()}
-          isLoading={isFetching}
+          onClick={() => {
+            void refetch();
+            void refetchStats();
+          }}
+          isLoading={isFetching || isStatsFetching}
           className="gap-1.5"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Refresh
         </Button>
       </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs uppercase tracking-wider text-cyan-300/80">Total users</span>
+            <Users className="w-4 h-4 text-cyan-300" />
+          </div>
+          <p className="text-2xl font-bold text-white tabular-nums">
+            {isStatsLoading ? '...' : (gameStats?.total_users ?? 0).toLocaleString()}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs uppercase tracking-wider text-emerald-300/80">Online now</span>
+            <Wifi className="w-4 h-4 text-emerald-300" />
+          </div>
+          <p className="text-2xl font-bold text-white tabular-nums">
+            {isStatsLoading ? '...' : (gameStats?.online_users ?? 0).toLocaleString()}
+          </p>
+        </div>
+      </div>
+
+      {isStatsError && !isStatsLoading && (
+        <p className="text-xs text-amber-400 mb-4">Live player stats are temporarily unavailable.</p>
+      )}
 
       {isLoading && (
         <div className="flex items-center justify-center py-20">

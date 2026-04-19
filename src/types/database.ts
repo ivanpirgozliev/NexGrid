@@ -94,6 +94,7 @@ export type Database = {
     Views: {
       leaderboard: {
         Row: {
+          avatar_url: string | null;
           created_at: string | null;
           level: number | null;
           lines: number | null;
@@ -106,6 +107,10 @@ export type Database = {
       };
     };
     Functions: {
+      get_public_game_stats: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
       get_user_stats: {
         Args: {
           p_user_id: string;

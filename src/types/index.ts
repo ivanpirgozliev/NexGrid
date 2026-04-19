@@ -20,6 +20,7 @@ export interface LeaderboardEntry {
   score_id: string;
   user_id: string;
   username: string;
+  avatar_url?: string | null;
   score: number;
   level: number;
   lines: number;
@@ -30,4 +31,9 @@ export interface UserStats {
   games_played: number;
   avg_score: number;
   best_streak: number;
+}
+
+export interface PublicGameStats {
+  total_users: number;
+  online_users: number;
 }

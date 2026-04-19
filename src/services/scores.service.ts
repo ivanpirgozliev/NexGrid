@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Score, LeaderboardEntry, UserStats } from '../types';
+import type { Score, LeaderboardEntry, UserStats, PublicGameStats } from '../types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -15,6 +15,21 @@ function toUserStats(value: unknown): UserStats {
     games_played: Number(data.games_played ?? 0),
     avg_score: Number(data.avg_score ?? 0),
     best_streak: Number(data.best_streak ?? 0),
+  };
+}
+
+function toPublicGameStats(value: unknown): PublicGameStats {
+  if (!value || typeof value !== 'object') {
+    return { total_users: 0, online_users: 0 };
+  }
+
+  const data = value as Record<string, unknown>;
+  const totalUsers = Number(data.total_users ?? 0);
+  const onlineUsers = Number(data.online_users ?? 0);
+
+  return {
+    total_users: Number.isFinite(totalUsers) && totalUsers > 0 ? Math.trunc(totalUsers) : 0,
+    online_users: Number.isFinite(onlineUsers) && onlineUsers > 0 ? Math.trunc(onlineUsers) : 0,
   };
 }
 
@@ -153,6 +168,12 @@ export const scoresService = {
       .limit(100);
     if (error) throw error;
     return (data ?? []) as LeaderboardEntry[];
+  },
+
+  async getPublicGameStats(): Promise<PublicGameStats> {
+    const { data, error } = await supabase.rpc('get_public_game_stats');
+    if (error) throw error;
+    return toPublicGameStats(data);
   },
 
   async getUserStats(userId: string): Promise<UserStats> {
