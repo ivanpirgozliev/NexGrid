@@ -53,26 +53,26 @@ export const LeaderboardTable = memo(function LeaderboardTable({
 }: LeaderboardTableProps) {
   return (
     <div className="rounded-xl border border-gray-800 overflow-hidden">
-      <div className="h-[443px] overflow-y-auto scrollbar-hide">
+      <div className="h-[506px] overflow-y-auto scrollbar-hide">
         <table className="w-full table-fixed">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-gray-800 bg-gray-900/95 backdrop-blur">
-              <th className="px-4 h-8 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">
+              <th className="px-4 h-9 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">
                 #
               </th>
-              <th className="px-4 h-8 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="px-4 h-9 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Player
               </th>
-              <th className="px-4 h-8 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
+              <th className="px-4 h-9 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
                 Score
               </th>
-              <th className="px-4 h-8 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell w-16">
+              <th className="px-4 h-9 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell w-16">
                 Level
               </th>
-              <th className="px-4 h-8 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell w-16">
+              <th className="px-4 h-9 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell w-16">
                 Lines
               </th>
-              <th className="px-4 h-8 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell w-28">
+              <th className="px-4 h-9 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell w-28">
                 Date
               </th>
             </tr>
@@ -94,12 +94,12 @@ export const LeaderboardTable = memo(function LeaderboardTable({
                       : 'bg-gray-900/20 hover:bg-gray-800/30'
                   }`}
                 >
-                  <td className="px-4 h-10 w-12 align-middle">
+                    <td className="px-4 h-[46px] w-12 align-middle">
                     <div className="flex items-center justify-center w-6">
                       <RankBadge rank={idx + 1} />
                     </div>
                   </td>
-                  <td className="px-4 h-10 min-w-0 align-middle">
+                    <td className="px-4 h-[46px] min-w-0 align-middle">
                     <div className="flex items-center gap-3 min-w-0">
                       <PlayerAvatar avatarUrl={entry.avatar_url} username={displayName} />
                       <span
@@ -114,18 +114,18 @@ export const LeaderboardTable = memo(function LeaderboardTable({
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 h-10 text-right w-24 align-middle">
+                  <td className="px-4 h-[46px] text-right w-24 align-middle">
                     <span className="text-sm font-bold text-white tabular-nums">
                       {entry.score.toLocaleString()}
                     </span>
                   </td>
-                  <td className="px-4 h-10 text-right hidden sm:table-cell w-16 align-middle">
+                  <td className="px-4 h-[46px] text-right hidden sm:table-cell w-16 align-middle">
                     <span className="text-sm text-gray-400 tabular-nums">{entry.level}</span>
                   </td>
-                  <td className="px-4 h-10 text-right hidden sm:table-cell w-16 align-middle">
+                  <td className="px-4 h-[46px] text-right hidden sm:table-cell w-16 align-middle">
                     <span className="text-sm text-gray-400 tabular-nums">{entry.lines}</span>
                   </td>
-                  <td className="px-4 h-10 text-right hidden md:table-cell w-28 align-middle">
+                  <td className="px-4 h-[46px] text-right hidden md:table-cell w-28 align-middle">
                     <span className="text-xs text-gray-500">{formatDate(entry.created_at)}</span>
                   </td>
                 </motion.tr>
