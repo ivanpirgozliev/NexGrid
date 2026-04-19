@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../../../lib/supabase';
 
+const PRESENCE_HEARTBEAT_MS = 30_000;
+
 interface AuthContextValue {
   session: Session | null;
   user: SupabaseUser | null;
@@ -57,6 +59,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const userId = user.id;
+
+    let isActive = true;
+
+    async function sendPresenceHeartbeat() {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (!isActive || !error) return;
+      // Presence heartbeat errors are non-blocking for auth UI.
+    }
+
+    void sendPresenceHeartbeat();
+    const heartbeatInterval = window.setInterval(() => {
+      void sendPresenceHeartbeat();
+    }, PRESENCE_HEARTBEAT_MS);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(heartbeatInterval);
+    };
+  }, [user?.id]);
 
   async function fetchUsername(userId: string) {
     try {
