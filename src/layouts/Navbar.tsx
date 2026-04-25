@@ -29,7 +29,7 @@ export function Navbar() {
           <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">
             <Gamepad2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
           </div>
-          <span className="hidden sm:inline text-white font-bold tracking-tight text-sm">TETRIS</span>
+          <span className="hidden sm:inline text-white font-bold tracking-tight text-sm">NexGrid</span>
         </NavLink>
 
         <nav className="flex items-center gap-0.5 sm:gap-1">

@@ -28,7 +28,7 @@ export function AuthPage() {
             <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4">
               <Gamepad2 className="w-7 h-7 text-cyan-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">TETRIS</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">NexGrid</h1>
             <p className="text-gray-500 text-sm mt-1">
               {mode === 'login' ? 'Welcome back, player' : 'Join the competition'}
             </p>

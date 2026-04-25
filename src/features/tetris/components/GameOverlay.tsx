@@ -32,7 +32,7 @@ export function GameOverlay({ status, score, onStart, onResume }: GameOverlayPro
           >
             {status === 'idle' && (
               <>
-                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">TETRIS</h2>
+                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">NexGrid</h2>
                 <p className="text-gray-400 text-sm mb-6">Use arrow keys to play</p>
                 <Button onClick={onStart} size="lg">
                   <Play className="w-4 h-4" />
