@@ -39,10 +39,10 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
+    "rcedit": "^5.0.2",
     "typescript": "5.5.4",
     "typescript-eslint": "^8.3.0",
-    "vite": "^8.0.10",
-    "wait-on": "^9.0.5"
+    "vite": "^8.0.10"
   },
   "build": {
     "appId": "com.nexgrid.app",
@@ -53,8 +53,13 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "electron/assets/icon.png",
+      "icon": "electron/assets/icon.ico",
       "signAndEditExecutable": false
+    },
+    "nsis": {
+      "installerIcon": "electron/assets/icon.ico",
+      "uninstallerIcon": "electron/assets/icon.ico",
+      "installerHeaderIcon": "electron/assets/icon.ico"
     }
   }
 }

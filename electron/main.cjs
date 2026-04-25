@@ -3,6 +3,8 @@ const http = require('http');
 const path = require('path');
 
 const isDev = !app.isPackaged;
+const isWindows = process.platform === 'win32';
+const WINDOW_ICON_PATH = path.join(__dirname, 'assets', isWindows ? 'icon.ico' : 'icon.png');
 const DEV_HOST = process.env.VITE_DEV_HOST || 'localhost';
 const DEV_PORT_START = Number(process.env.VITE_DEV_PORT_START || 5173);
 const DEV_PORT_END = Number(process.env.VITE_DEV_PORT_END || 5190);
@@ -35,7 +37,7 @@ async function resolveDevServerUrl() {
   const start = Date.now();
 
   while (Date.now() - start < DEV_SERVER_WAIT_MS) {
-    for (let port = DEV_PORT_START; port <= DEV_PORT_END; port += 1) {
+    for (let port = DEV_PORT_END; port >= DEV_PORT_START; port -= 1) {
       const baseUrl = `http://${DEV_HOST}:${port}`;
       if (await isViteServerUp(baseUrl)) {
         return baseUrl;
@@ -54,7 +56,7 @@ async function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, 'assets', 'icon.png'),
+    icon: WINDOW_ICON_PATH,
   });
 
   if (isDev) {
