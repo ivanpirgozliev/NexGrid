@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createHashRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { AuthLayout } from './AuthLayout';
@@ -7,7 +7,7 @@ import { GamePage } from '../features/tetris/pages/GamePage';
 import { LeaderboardPage } from '../features/leaderboard/pages/LeaderboardPage';
 import { ProfilePage } from '../features/profile/pages/ProfilePage';
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: '/',
     element: <AuthLayout />,
