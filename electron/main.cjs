@@ -57,6 +57,7 @@ async function createWindow() {
     width: 1200,
     height: 800,
     icon: WINDOW_ICON_PATH,
+    fullscreen: true,
   });
 
   if (isDev) {
