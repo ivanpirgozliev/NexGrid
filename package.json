@@ -64,7 +64,7 @@
     "publish": {
       "provider": "github",
       "owner": "ivanpirgozliev",
-      "repo": "Tetris"
+      "repo": "NexGrid"
     }
   }
 }
