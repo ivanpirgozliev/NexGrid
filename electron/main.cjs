@@ -1,4 +1,5 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const http = require('http');
 const path = require('path');
 
@@ -69,9 +70,35 @@ async function createWindow() {
   }
 }
 
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Налична е нова версия',
+      message: 'Нова версия беше изтеглена. Рестартирайте приложението за да инсталирате update-а.',
+      buttons: ['Рестартирай сега', 'По-късно'],
+    }).then(({ response }) => {
+      if (response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('Auto-update check failed:', err);
+  });
+}
+
 app.whenReady().then(() => {
   createWindow().catch((error) => {
     console.error('Failed to create Electron window:', error);
     app.quit();
   });
+
+  if (!isDev) {
+    setupAutoUpdater();
+  }
 });
