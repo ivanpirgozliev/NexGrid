@@ -54,15 +54,9 @@ async function resolveDevServerUrl() {
 }
 
 async function createWindow() {
-  const { workAreaSize, workArea } = screen.getPrimaryDisplay();
-  const width = Math.min(1400, workAreaSize.width);
-
   const win = new BrowserWindow({
-    width,
-    height: workAreaSize.height,
-    x: Math.round(workArea.x + (workAreaSize.width - width) / 2),
-    y: workArea.y,
     icon: WINDOW_ICON_PATH,
+    fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
