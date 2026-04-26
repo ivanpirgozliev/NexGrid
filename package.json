@@ -54,8 +54,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "electron/assets/icon.ico",
-      "signAndEditExecutable": false
+      "icon": "electron/assets/icon.ico"
     },
     "nsis": {
       "installerIcon": "electron/assets/icon.ico",
