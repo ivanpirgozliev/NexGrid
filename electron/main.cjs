@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, screen } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const http = require('http');
 const path = require('path');
@@ -54,11 +54,20 @@ async function resolveDevServerUrl() {
 }
 
 async function createWindow() {
+  const { workAreaSize, workArea } = screen.getPrimaryDisplay();
+  const width = Math.min(1400, workAreaSize.width);
+
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width,
+    height: workAreaSize.height,
+    x: Math.round(workArea.x + (workAreaSize.width - width) / 2),
+    y: workArea.y,
     icon: WINDOW_ICON_PATH,
-    fullscreen: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
 
   if (isDev) {
@@ -92,6 +101,10 @@ function setupAutoUpdater() {
   });
 }
 
+ipcMain.on('app:quit', () => {
+  app.quit();
+});
+
 app.whenReady().then(() => {
   createWindow().catch((error) => {
     console.error('Failed to create Electron window:', error);
@@ -100,5 +113,11 @@ app.whenReady().then(() => {
 
   if (!isDev) {
     setupAutoUpdater();
+  }
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
   }
 });

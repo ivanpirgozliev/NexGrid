@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Gamepad2, Trophy, LogOut, User } from 'lucide-react';
+import { Gamepad2, Trophy, LogOut, User, Power } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authService } from '../services/auth.service';
 
@@ -15,6 +15,12 @@ export function Navbar() {
   async function handleSignOut() {
     await authService.signOut();
     navigate('/auth');
+  }
+
+  const isElectron = typeof window !== 'undefined' && Boolean(window.electronAPI);
+
+  function handleQuit() {
+    window.electronAPI?.quit();
   }
 
   return (
@@ -59,6 +65,16 @@ export function Navbar() {
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Sign out</span>
           </button>
+          {isElectron && (
+            <button
+              onClick={handleQuit}
+              title="Exit"
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-red-400 hover:bg-red-950/20 transition-colors shrink-0"
+            >
+              <Power className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Exit</span>
+            </button>
+          )}
         </div>
       </div>
     </motion.header>
