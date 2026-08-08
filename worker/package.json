@@ -1,0 +1,24 @@
+{
+  "name": "nexgrid-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "migrate": "node scripts/apply-migrations.mjs",
+    "import-supabase": "node scripts/import-from-supabase.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "bcryptjs": "^3.0.2",
+    "hono": "^4.10.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "pg": "^8.22.0",
+    "typescript": "5.5.4",
+    "wrangler": "^4.120.0"
+  }
+}

@@ -22,3 +22,7 @@ dist-ssr
 *.sw?
 .env
 .mcp.json
+
+# Worker secrets and build state
+worker/.dev.vars
+worker/.wrangler

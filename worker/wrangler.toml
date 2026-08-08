@@ -1,0 +1,18 @@
+name = "nexgrid-api"
+main = "src/index.ts"
+compatibility_date = "2026-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Avatars live at <R2_PUBLIC_URL>/avatars/<user_id>/avatar
+[[r2_buckets]]
+binding = "AVATARS"
+bucket_name = "nexgrid"
+
+[vars]
+R2_PUBLIC_URL = "https://pub-83b3ba4d72014412baed6ad8603c5b37.r2.dev"
+ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,app://."
+
+# Secrets — set with `wrangler secret put <NAME>`, never committed:
+#   DATABASE_URL   Neon pooled connection string
+#   JWT_SECRET     HS256 signing key for access tokens
+#   MIGRATION_KEY  one-shot bearer token for /admin/import-avatar
