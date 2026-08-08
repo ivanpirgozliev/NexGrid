@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from './middleware/cors';
 import { authRoutes } from './routes/auth';
+import { gameRoutes } from './routes/game';
 import type { AppBindings } from './types';
 
 const app = new Hono<AppBindings>();
@@ -10,6 +11,7 @@ app.use('*', cors);
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
 app.route('/auth', authRoutes);
+app.route('/game', gameRoutes);
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 
