@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "bcryptjs": "^3.0.2",
     "hono": "^4.10.3"
   },
   "devDependencies": {
