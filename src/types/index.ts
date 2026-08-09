@@ -1,10 +1,17 @@
-export type { Database } from './database';
+export type { AuthUser, AuthSession } from '../lib/authStore';
 
 export interface User {
   id: string;
   email: string;
   username: string;
   avatar_url?: string | null;
+}
+
+export interface Profile {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  created_at: string;
 }
 
 export interface Score {

@@ -89,13 +89,11 @@ export function useAuth() {
     setError(null);
     setInfo(null);
     try {
-      const data = await authService.signUp(credentials);
+      // The API signs the user in as part of signing up — there is no email
+      // confirmation step to wait on, unlike the old Supabase flow.
+      await authService.signUp(credentials);
       recordAttempt(true);
-      if (data.session) {
-        navigate('/game');
-      } else {
-        setInfo('Account created! Check your email to confirm, then sign in.');
-      }
+      navigate('/game');
     } catch (err) {
       recordAttempt(false);
       const raw = err instanceof Error ? err.message : '';

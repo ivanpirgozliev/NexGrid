@@ -1,12 +1,19 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '../../../lib/supabase';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
+import { authStore, type AuthSession, type AuthUser } from '../../../lib/authStore';
+import { authService } from '../../../services/auth.service';
 
 const PRESENCE_HEARTBEAT_MS = 30_000;
 
 interface AuthContextValue {
-  session: Session | null;
-  user: SupabaseUser | null;
+  session: AuthSession | null;
+  user: AuthUser | null;
   username: string | null;
   isLoading: boolean;
 }
@@ -14,94 +21,74 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const session = useSyncExternalStore(
+    authStore.subscribe,
+    authStore.get,
+    () => null
+  );
+
+  /*
+    The session is restored from localStorage synchronously, so a returning user
+    lands on their page without an auth flash. isLoading only covers the
+    round trip that confirms the stored token has not been revoked or expired.
+  */
+  const [isLoading, setIsLoading] = useState(() => authStore.get() !== null);
 
   useEffect(() => {
-    supabase.auth
-      .getUser()
-      .then(({ data: { user: verifiedUser } }) => {
-        if (verifiedUser) {
-          setUser(verifiedUser);
-          supabase.auth.getSession().then(({ data }) => {
-            setSession(data.session);
-          });
-          fetchUsername(verifiedUser.id);
-        } else {
-          setIsLoading(false);
-        }
-      })
-      .catch(() => {
-        setIsLoading(false);
-      });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        if (newSession?.user) {
-          (async () => {
-            await fetchUsername(newSession.user.id);
-          })();
-        }
-        return;
-      }
-
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      if (!newSession?.user) {
-        setUsername(null);
-        setIsLoading(false);
-      }
-    });
-
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    const userId = user.id;
-
-    let isActive = true;
-
-    async function sendPresenceHeartbeat() {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ last_seen_at: new Date().toISOString() })
-        .eq('id', userId);
-
-      if (!isActive || !error) return;
-      // Presence heartbeat errors are non-blocking for auth UI.
+    if (!authStore.get()) {
+      setIsLoading(false);
+      return;
     }
 
-    void sendPresenceHeartbeat();
-    const heartbeatInterval = window.setInterval(() => {
-      void sendPresenceHeartbeat();
+    let cancelled = false;
+
+    authService
+      .getCurrentUser()
+      .catch(() => {
+        // api.ts already cleared the session if the refresh token was rejected.
+        // Anything else (a network blip) leaves the cached session in place.
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const userId = session?.user.id ?? null;
+
+  useEffect(() => {
+    if (!userId) return;
+
+    let active = true;
+
+    function sendPresence() {
+      // Presence is best-effort: a failure must not disturb the auth UI.
+      void authService.sendPresenceHeartbeat().catch(() => {});
+    }
+
+    sendPresence();
+    const interval = window.setInterval(() => {
+      if (active) sendPresence();
     }, PRESENCE_HEARTBEAT_MS);
 
     return () => {
-      isActive = false;
-      window.clearInterval(heartbeatInterval);
+      active = false;
+      window.clearInterval(interval);
     };
-  }, [user?.id]);
-
-  async function fetchUsername(userId: string) {
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', userId)
-        .maybeSingle();
-      setUsername(data?.username ?? null);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  }, [userId]);
 
   return (
-    <AuthContext.Provider value={{ session, user, username, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user: session?.user ?? null,
+        username: session?.user.username ?? null,
+        isLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

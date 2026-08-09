@@ -4,9 +4,10 @@ import { useAuthContext } from '../../auth/context/AuthContext';
 
 export function useUserStats() {
   const { user } = useAuthContext();
+
   return useQuery({
     queryKey: ['userStats', user?.id],
-    queryFn: () => scoresService.getUserStats(user!.id),
+    queryFn: () => scoresService.getUserStats(),
     enabled: !!user,
     staleTime: 1000 * 60,
   });

@@ -15,4 +15,3 @@ ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:
 # Secrets — set with `wrangler secret put <NAME>`, never committed:
 #   DATABASE_URL   Neon pooled connection string
 #   JWT_SECRET     HS256 signing key for access tokens
-#   MIGRATION_KEY  one-shot bearer token for /admin/import-avatar

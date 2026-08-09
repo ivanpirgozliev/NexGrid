@@ -176,7 +176,7 @@ export function ProfilePage() {
   const uploadAvatarMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!user) throw new Error('Not authenticated');
-      return authService.uploadAvatar(user.id, file);
+      return authService.uploadAvatar(file);
     },
     onSuccess: async () => {
       setAvatarError(null);
@@ -191,7 +191,7 @@ export function ProfilePage() {
   const removeAvatarMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated');
-      return authService.removeAvatar(user.id);
+      return authService.removeAvatar();
     },
     onSuccess: async () => {
       setAvatarError(null);

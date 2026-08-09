@@ -32,6 +32,7 @@ interface SessionUser {
   email: string;
   username: string | null;
   avatar_url: string | null;
+  created_at: string;
 }
 
 async function issueSession(db: Db, env: Env, user: SessionUser) {
@@ -61,6 +62,7 @@ async function issueSession(db: Db, env: Env, user: SessionUser) {
       email: user.email,
       username: user.username,
       avatar_url: user.avatar_url,
+      created_at: user.created_at,
     },
   };
 }
@@ -106,13 +108,13 @@ authRoutes.post('/signup', async (c) => {
       WITH new_user AS (
         INSERT INTO users (email, password_hash)
         VALUES (${email}, crypt(${password as string}, gen_salt('bf', ${BCRYPT_COST})))
-        RETURNING id, email
+        RETURNING id, email, created_at
       ), new_profile AS (
         INSERT INTO profiles (id, username)
         SELECT id, ${username} FROM new_user
         RETURNING id, username, avatar_url
       )
-      SELECT u.id, u.email, p.username, p.avatar_url
+      SELECT u.id, u.email, u.created_at, p.username, p.avatar_url
       FROM new_user u JOIN new_profile p ON p.id = u.id
     `) as SessionUser[];
 
@@ -144,6 +146,7 @@ authRoutes.post('/signin', async (c) => {
     SELECT
       u.id,
       u.email,
+      u.created_at,
       u.locked_until,
       p.username,
       p.avatar_url,
@@ -226,7 +229,7 @@ authRoutes.post('/refresh', async (c) => {
   }
 
   const users = (await db`
-    SELECT u.id, u.email, p.username, p.avatar_url
+    SELECT u.id, u.email, u.created_at, p.username, p.avatar_url
     FROM users u
     LEFT JOIN profiles p ON p.id = u.id
     WHERE u.id = ${revoked[0].user_id}
@@ -269,7 +272,7 @@ authRoutes.get('/me', requireAuth, async (c) => {
   const user = c.get('user');
 
   const rows = (await db`
-    SELECT u.id, u.email, p.username, p.avatar_url
+    SELECT u.id, u.email, u.created_at, p.username, p.avatar_url
     FROM users u
     LEFT JOIN profiles p ON p.id = u.id
     WHERE u.id = ${user.id}

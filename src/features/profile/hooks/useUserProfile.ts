@@ -7,7 +7,7 @@ export function useUserProfile() {
 
   return useQuery({
     queryKey: ['userProfile', user?.id],
-    queryFn: () => authService.getProfile(user!.id),
+    queryFn: () => authService.getProfile(),
     enabled: !!user,
     staleTime: 1000 * 60,
   });

@@ -23,7 +23,7 @@ export function useUserScores() {
   const { user } = useAuthContext();
   return useQuery({
     queryKey: ['userScores', user?.id],
-    queryFn: () => scoresService.getUserScores(user!.id),
+    queryFn: () => scoresService.getUserScores(),
     enabled: !!user,
   });
 }

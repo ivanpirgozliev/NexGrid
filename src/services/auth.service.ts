@@ -1,4 +1,6 @@
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
+import { authStore, type AuthSession, type AuthUser } from '../lib/authStore';
+import type { Profile } from '../types';
 
 export interface AuthCredentials {
   email: string;
@@ -6,92 +8,73 @@ export interface AuthCredentials {
   username?: string;
 }
 
-const AVATAR_BUCKET = 'avatars';
-
-function getAvatarPath(userId: string): string {
-  return `${userId}/avatar`;
-}
-
 export const authService = {
-  async signUp({ email, password, username }: AuthCredentials) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username: username ?? email.split('@')[0] },
-      },
-    });
-    if (error) throw error;
-    return data;
+  async signUp({ email, password, username }: AuthCredentials): Promise<AuthSession> {
+    const session = await api.post<AuthSession>(
+      '/auth/signup',
+      { email, password, username: username ?? email.split('@')[0] },
+      { auth: false }
+    );
+    authStore.set(session);
+    return session;
   },
 
-  async signIn({ email, password }: AuthCredentials) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+  async signIn({ email, password }: AuthCredentials): Promise<AuthSession> {
+    const session = await api.post<AuthSession>(
+      '/auth/signin',
+      { email, password },
+      { auth: false }
+    );
+    authStore.set(session);
+    return session;
   },
 
-  async signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+  async signOut(): Promise<void> {
+    const refreshToken = authStore.getRefreshToken();
+
+    try {
+      if (refreshToken) {
+        await api.post('/auth/signout', { refresh_token: refreshToken }, { auth: false });
+      }
+    } finally {
+      // The local session is dropped even if revoking it server-side failed,
+      // so signing out never leaves the user apparently still logged in.
+      authStore.clear();
+    }
   },
 
-  async getSession() {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    return data.session;
+  /** Confirms the stored session is still valid and refreshes the cached user. */
+  async getCurrentUser(): Promise<AuthUser> {
+    const user = await api.get<AuthUser>('/auth/me');
+    authStore.setUser(user);
+    return user;
   },
 
-  async getProfile(userId: string) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-    if (error) throw error;
-    return data;
+  async getProfile(): Promise<Profile> {
+    return api.get<Profile>('/profile/me');
   },
 
-  async uploadAvatar(userId: string, file: File) {
-    const path = getAvatarPath(userId);
+  async uploadAvatar(file: File): Promise<string> {
+    const { avatar_url: avatarUrl } = await api.postRaw<{ avatar_url: string }>(
+      '/profile/avatar',
+      file,
+      file.type
+    );
 
-    const { error: uploadError } = await supabase.storage
-      .from(AVATAR_BUCKET)
-      .upload(path, file, {
-        cacheControl: '0',
-        upsert: true,
-        contentType: file.type,
-      });
-
-    if (uploadError) throw uploadError;
-
-    const { data: urlData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
-    const avatarUrl = urlData.publicUrl;
-
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ avatar_url: avatarUrl })
-      .eq('id', userId);
-
-    if (profileError) throw profileError;
+    const session = authStore.get();
+    if (session) authStore.setUser({ ...session.user, avatar_url: avatarUrl });
 
     return avatarUrl;
   },
 
-  async removeAvatar(userId: string) {
-    const path = getAvatarPath(userId);
+  async removeAvatar(): Promise<void> {
+    await api.delete('/profile/avatar');
 
-    const { error: deleteError } = await supabase.storage
-      .from(AVATAR_BUCKET)
-      .remove([path]);
+    const session = authStore.get();
+    if (session) authStore.setUser({ ...session.user, avatar_url: null });
+  },
 
-    if (deleteError) throw deleteError;
-
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ avatar_url: null })
-      .eq('id', userId);
-
-    if (profileError) throw profileError;
+  async sendPresenceHeartbeat(): Promise<void> {
+    await api.post('/presence');
   },
 };
