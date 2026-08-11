@@ -84,6 +84,40 @@ function wideSvg(width, height) {
   </svg>`;
 }
 
+/*
+  Store listing art. Unlike the tiles, these are uploaded by hand in Partner
+  Center rather than embedded in the package, so they live in build/store/.
+  The poster is 9:16 and the box art 1:1, both rendered at the larger of the
+  two sizes Microsoft accepts so they stay crisp when scaled down.
+*/
+function storeArtSvg(width, height) {
+  const isPortrait = height > width;
+
+  /*
+    Portrait art carries a wordmark under the glyph, so the mark is smaller and
+    sits above centre to leave the text clear air. The square version is the
+    glyph alone, centred.
+  */
+  const glyphWidth = width * (isPortrait ? 0.52 : 0.55);
+  const scale = glyphWidth / GLYPH_W;
+  const cy = isPortrait ? height * 0.42 : height / 2;
+
+  const wordmark = !isPortrait
+    ? ''
+    : `<text x="${width / 2}" y="${height * 0.74}" text-anchor="middle"
+             font-family="Segoe UI, Arial, sans-serif" font-weight="700"
+             font-size="${width * 0.11}" fill="#ffffff" letter-spacing="${width * 0.004}">NexGrid</text>`;
+
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${width}" height="${height}" fill="${BG}"/>
+    ${gridMarkup(width, height)}
+    <g transform="translate(${width / 2} ${cy}) scale(${scale}) translate(${-GLYPH_CX} ${-GLYPH_CY})">
+      ${blocksMarkup()}
+    </g>
+    ${wordmark}
+  </svg>`;
+}
+
 const targets = [
   { name: 'Square44x44Logo.png', size: 44, svg: squareSvg() },
   { name: 'Square71x71Logo.png', size: 71, svg: squareSvg() },
@@ -93,7 +127,15 @@ const targets = [
   { name: 'Wide310x150Logo.png', width: 310, height: 150, svg: wideSvg(310, 150) },
 ];
 
-for (const t of targets) {
+const storeDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'build', 'store');
+mkdirSync(storeDir, { recursive: true });
+
+const storeTargets = [
+  { name: 'PosterArt1440x2160.png', width: 1440, height: 2160 },
+  { name: 'BoxArt2160x2160.png', width: 2160, height: 2160 },
+].map((t) => ({ ...t, svg: storeArtSvg(t.width, t.height), dir: storeDir }));
+
+for (const t of [...targets.map((t) => ({ ...t, dir: outDir })), ...storeTargets]) {
   const width = t.width ?? t.size;
   const height = t.height ?? t.size;
 
@@ -102,8 +144,8 @@ for (const t of targets) {
     .png()
     .toBuffer();
 
-  writeFileSync(join(outDir, t.name), png);
+  writeFileSync(join(t.dir, t.name), png);
   console.log(`✓ ${t.name.padEnd(24)} ${width}x${height}`);
 }
 
-console.log(`\nWrote ${targets.length} tiles to build/appx/`);
+console.log(`\nWrote ${targets.length} tiles to build/appx/ and ${storeTargets.length} images to build/store/`);
