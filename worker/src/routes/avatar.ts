@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { getDb } from '../db';
+import { avatarKey } from '../lib/avatars';
 import { requireAuth } from '../middleware/auth';
 import type { AppBindings } from '../types';
 
@@ -35,10 +36,6 @@ function matchesMagicBytes(bytes: Uint8Array, contentType: AllowedType): boolean
   const ascii = (offset: number, text: string) =>
     [...text].every((ch, i) => bytes[offset + i] === ch.charCodeAt(0));
   return ascii(0, 'RIFF') && ascii(8, 'WEBP');
-}
-
-function avatarKey(userId: string): string {
-  return `avatars/${userId}/avatar`;
 }
 
 function publicUrl(env: { R2_PUBLIC_URL: string }, userId: string): string {

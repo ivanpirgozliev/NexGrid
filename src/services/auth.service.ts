@@ -77,4 +77,10 @@ export const authService = {
   async sendPresenceHeartbeat(): Promise<void> {
     await api.post('/presence');
   },
+
+  /** Irreversible. Requires the password again, not just a valid session. */
+  async deleteAccount(password: string): Promise<void> {
+    await api.delete('/auth/account', { password });
+    authStore.clear();
+  },
 };

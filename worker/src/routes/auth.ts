@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { getDb, isUniqueViolation, type Db } from '../db';
+import { avatarKey } from '../lib/avatars';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
@@ -264,6 +265,49 @@ authRoutes.post('/signout', async (c) => {
   }
 
   // Always 204: signing out must not report whether the token was still live.
+  return c.body(null, 204);
+});
+
+/*
+  Self-service account deletion, which the privacy policy promises.
+
+  The password is required even though the caller already holds a valid access
+  token: this is irreversible, and a stolen token alone should not be enough to
+  destroy someone's account.
+
+  The avatar is removed from R2 before the database row. Doing it the other way
+  round risks leaving an image of a deleted user in public storage if the second
+  step fails — a retention problem — whereas this order at worst loses an avatar
+  for an account that still exists, which the user can simply re-upload.
+
+  Everything else goes with the user row: profiles, scores, game_sessions and
+  refresh_tokens all cascade.
+*/
+authRoutes.delete('/account', requireAuth, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const password = (body as Record<string, unknown> | null)?.password;
+
+  if (typeof password !== 'string' || password.length === 0) {
+    return c.json({ error: 'Password confirmation is required' }, 400);
+  }
+
+  const db = getDb(c.env);
+  const user = c.get('user');
+
+  const confirmed = (await db`
+    SELECT id FROM users
+    WHERE id = ${user.id}
+      AND password_hash = crypt(${password}, password_hash)
+  `) as Array<{ id: string }>;
+
+  if (confirmed.length === 0) {
+    return c.json({ error: 'Incorrect password' }, 401);
+  }
+
+  await c.env.AVATARS.delete(avatarKey(user.id));
+  await db`DELETE FROM users WHERE id = ${user.id}`;
+
+  console.info(`Account deleted: ${user.id}`);
   return c.body(null, 204);
 });
 

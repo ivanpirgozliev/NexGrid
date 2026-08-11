@@ -140,7 +140,7 @@ export const api = {
     return res.json() as Promise<T>;
   },
 
-  async delete(path: string): Promise<void> {
-    await request(path, { method: 'DELETE' });
+  async delete(path: string, body?: unknown): Promise<void> {
+    await request(path, { method: 'DELETE', body });
   },
 };

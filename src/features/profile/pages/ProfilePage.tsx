@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { User, Gamepad2, Target, Flame, RefreshCw, Upload, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  User,
+  Gamepad2,
+  Target,
+  Flame,
+  RefreshCw,
+  Upload,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react';
 import Cropper, { type Area } from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
+import { Input } from '../../../components/ui/Input';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { useUserStats } from '../hooks/useUserStats';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -155,7 +166,11 @@ export function ProfilePage() {
     isFetching: isProfileFetching,
   } = useUserProfile();
 
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(() => Date.now());
   const [cropImageSource, setCropImageSource] = useState<string | null>(null);
@@ -185,6 +200,18 @@ export function ProfilePage() {
     },
     onError: (error) => {
       setAvatarError(getErrorMessage(error));
+    },
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: (password: string) => authService.deleteAccount(password),
+    onSuccess: () => {
+      // The session is already cleared by the service; leave the protected area
+      // explicitly rather than waiting for a redirect to notice.
+      navigate('/auth', { replace: true });
+    },
+    onError: (error) => {
+      setDeleteError(getErrorMessage(error));
     },
   });
 
@@ -442,6 +469,91 @@ export function ProfilePage() {
         <div className="mt-8 text-center py-10 rounded-2xl border border-gray-800 bg-gray-900/30">
           <Gamepad2 className="w-10 h-10 mx-auto mb-3 text-gray-700" />
           <p className="text-gray-500">No games played yet. Start playing to see your stats!</p>
+        </div>
+      )}
+
+      <div className="mt-10 rounded-2xl border border-red-900/40 bg-red-950/10 p-5">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h2 className="text-white text-sm font-semibold">Delete account</h2>
+            <p className="text-sm text-gray-400 mt-1 leading-relaxed">
+              Permanently removes your account, every score you have set, and your
+              profile picture. Your entries disappear from the leaderboard. This
+              cannot be undone.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-4 border-red-800 text-red-300 hover:bg-red-950/40"
+              onClick={() => {
+                setDeleteError(null);
+                setDeletePassword('');
+                setIsDeleteDialogOpen(true);
+              }}
+            >
+              Delete my account
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 z-50 bg-gray-950/90 backdrop-blur-sm px-4 flex items-center justify-center">
+          <div className="w-full max-w-md rounded-2xl border border-red-900/50 bg-gray-900/95 p-6 shadow-2xl shadow-black/40">
+            <h2 className="text-white text-lg font-semibold">Delete your account?</h2>
+            <p className="text-sm text-gray-400 mt-2 leading-relaxed">
+              This deletes your account, {stats?.games_played ?? 0} recorded{' '}
+              {stats?.games_played === 1 ? 'game' : 'games'} and your profile
+              picture. It cannot be undone.
+            </p>
+
+            <form
+              className="mt-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!deletePassword) {
+                  setDeleteError('Enter your password to confirm.');
+                  return;
+                }
+                setDeleteError(null);
+                deleteAccountMutation.mutate(deletePassword);
+              }}
+            >
+              <Input
+                id="delete-password"
+                type="password"
+                label="Confirm with your password"
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                error={deleteError ?? undefined}
+                disabled={deleteAccountMutation.isPending}
+              />
+
+              <div className="mt-5 flex gap-3 justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  disabled={deleteAccountMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  size="sm"
+                  className="border-red-700 bg-red-900/40 text-red-200 hover:bg-red-900/70"
+                  isLoading={deleteAccountMutation.isPending}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete permanently
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
