@@ -63,7 +63,8 @@
     "publish": {
       "provider": "github",
       "owner": "ivanpirgozliev",
-      "repo": "NexGrid"
+      "repo": "NexGrid",
+      "releaseType": "release"
     }
   }
 }
