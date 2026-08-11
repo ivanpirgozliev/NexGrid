@@ -57,12 +57,12 @@
       "icon": "electron/assets/icon.ico"
     },
     "appx": {
-      "identityName": "REPLACE-WITH-PARTNER-CENTER-IDENTITY-NAME",
-      "publisher": "CN=REPLACE-WITH-PARTNER-CENTER-PUBLISHER-ID",
+      "identityName": "IvanPirgozliev.NexGrid",
+      "publisher": "CN=2FA5C754-7E1D-499D-B21F-933805FCFD2C",
       "publisherDisplayName": "Ivan Pirgozliev",
       "applicationId": "NexGrid",
       "displayName": "NexGrid",
-      "backgroundColor": "#0a0a0f",
+      "backgroundColor": "#0d1117",
       "showNameOnTiles": true,
       "languages": ["en-US", "bg-BG"]
     },
