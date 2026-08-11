@@ -11,6 +11,7 @@
     "dev": "concurrently \"vite\" \"electron .\"",
     "build": "vite build",
     "dist": "npm run build && electron-builder",
+    "dist:store": "npm run build && electron-builder --win appx --publish never",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
@@ -54,6 +55,16 @@
     "win": {
       "target": "nsis",
       "icon": "electron/assets/icon.ico"
+    },
+    "appx": {
+      "identityName": "REPLACE-WITH-PARTNER-CENTER-IDENTITY-NAME",
+      "publisher": "CN=REPLACE-WITH-PARTNER-CENTER-PUBLISHER-ID",
+      "publisherDisplayName": "Ivan Pirgozliev",
+      "applicationId": "NexGrid",
+      "displayName": "NexGrid",
+      "backgroundColor": "#0a0a0f",
+      "showNameOnTiles": true,
+      "languages": ["en-US", "bg-BG"]
     },
     "nsis": {
       "installerIcon": "electron/assets/icon.ico",

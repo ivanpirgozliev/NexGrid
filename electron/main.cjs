@@ -105,7 +105,14 @@ app.whenReady().then(() => {
     app.quit();
   });
 
-  if (!isDev) {
+  /*
+    Skipped in the Microsoft Store build. An MSIX package is installed into a
+    read-only container, so electron-updater physically cannot replace the app,
+    and shipping a self-updater is against Store policy — Store builds are
+    updated by the Store itself. Electron sets process.windowsStore only when
+    running from an AppX/MSIX package.
+  */
+  if (!isDev && !process.windowsStore) {
     setupAutoUpdater();
   }
 });
