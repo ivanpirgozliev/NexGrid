@@ -4,8 +4,8 @@ import { requireAuth } from '../middleware/auth';
 import type { AppBindings } from '../types';
 
 /*
-  Limits carried over from the Supabase `avatars` bucket definition
-  (supabase/migrations/20260419123000_add_profile_avatars.sql).
+  Limits carried over from the Supabase `avatars` bucket definition: 2MB, and
+  JPEG/PNG/WebP only.
 */
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;

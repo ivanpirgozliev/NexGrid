@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </h2>
             <p className="text-gray-400 text-sm leading-relaxed">
               {isEnvError
-                ? 'The application is missing required environment variables. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your hosting provider.'
+                ? 'The application is missing required environment variables. Please set VITE_API_URL to the NexGrid Worker API URL in your build environment.'
                 : 'An unexpected error occurred. Please try refreshing the page.'}
             </p>
             <button

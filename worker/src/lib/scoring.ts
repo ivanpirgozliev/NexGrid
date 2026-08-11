@@ -1,5 +1,6 @@
 /*
-  Ported verbatim from supabase/functions/submit-score/index.ts.
+  Ported verbatim from the retired Supabase edge function `submit-score`
+  (removed in the migration to this Worker; see git history before v1.0.3).
 
   Given a total number of cleared lines, works out the lowest and highest score
   reachable by any sequence of single/double/triple/tetris clears that sums to

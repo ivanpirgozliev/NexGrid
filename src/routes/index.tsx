@@ -1,13 +1,8 @@
-import { lazy } from 'react';
 import { createHashRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { AuthLayout } from './AuthLayout';
-
-const AuthPage = lazy(() => import('../features/auth/pages/AuthPage').then(m => ({ default: m.AuthPage })));
-const GamePage = lazy(() => import('../features/tetris/pages/GamePage').then(m => ({ default: m.GamePage })));
-const LeaderboardPage = lazy(() => import('../features/leaderboard/pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
-const ProfilePage = lazy(() => import('../features/profile/pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+import { AuthPage, GamePage, LeaderboardPage, ProfilePage } from './pages';
 
 export const router = createHashRouter([
   {

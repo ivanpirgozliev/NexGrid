@@ -1,8 +1,12 @@
-# Tetris
+# NexGrid
 
-## Demo
+A block-stacking puzzle game shipped as a Windows desktop app, with online
+leaderboards and server-verified scores.
 
-**Live:** Set your deployed URL here.
+## Download
+
+Installers are published on the [Releases page](https://github.com/ivanpirgozliev/NexGrid/releases).
+The app updates itself from there.
 
 ---
 
@@ -11,16 +15,18 @@
 | Layer | Technology |
 |---|---|
 | Framework | React 18 + TypeScript |
-| Build | Vite 5 |
+| Build | Vite |
+| Desktop shell | Electron + electron-builder |
 | Styling | Tailwind CSS 4 |
 | Animations | Framer Motion |
 | Icons | Lucide React |
 | Routing | React Router 7 |
 | State (server) | TanStack React Query 5 |
 | State (game) | `useReducer` (pure reducer) |
-| Database | Supabase (Postgres) |
-| Auth | Supabase Auth (email/password) |
-| Serverless | Supabase Edge Functions (Deno) |
+| API | Cloudflare Workers + Hono |
+| Database | Neon (serverless Postgres) |
+| Auth | Own JWT issuance, bcrypt via pgcrypto |
+| Object storage | Cloudflare R2 (avatars) |
 
 ---
 
@@ -39,31 +45,52 @@ src/
     profile/          # Player stats dashboard
   components/ui/      # Shared Button, Input
   services/           # scores.service.ts, auth.service.ts
-  lib/                # supabase client, react-query client
+  lib/                # api client, auth store, react-query client
   layouts/            # AppLayout + Navbar
 
-supabase/
-  migrations/         # 12 incremental SQL migrations
-  functions/
-    start-game/       # Creates a session + token before gameplay
-    game-heartbeat/   # Periodic heartbeat proving the client is alive
-    submit-score/     # Validates + inserts score (anti-cheat)
+worker/               # Cloudflare Worker - the only thing that touches the DB
+  migrations/         # SQL migrations, applied by scripts/apply-migrations.mjs
+  src/
+    routes/           # auth, game, data, avatar
+    middleware/       # bearer-token auth, CORS allowlist
+    lib/              # JWT, validation, score bounds
 ```
 
 ### Data Flow
 
-1. Player authenticates (Supabase Auth) -> session JWT issued.
-2. Player clicks "Play" -> `start-game` edge function creates a `game_sessions` row with a cryptographic token.
-3. During gameplay the client sends a heartbeat every 15 s to `game-heartbeat`.
-4. On game-over the client calls `submit-score` which validates the score against a battery of checks (session age, heartbeat count, score-to-lines ratio, level consistency) before inserting into `scores`.
-5. Leaderboard and profile stats are live-queried via Supabase client + React Query.
+The client never reaches the database. Every read and write goes through the
+Worker, which is the only holder of the connection string.
+
+1. Player signs in -> the Worker verifies the password with `crypt()` in
+   Postgres and returns an access token (1 h) plus a rotating refresh token
+   (30 d). Both are kept in `localStorage`.
+2. Player clicks "Play" -> `POST /game/start` creates a `game_sessions` row with
+   a server-generated token.
+3. During gameplay the client sends a heartbeat every 15 s to
+   `POST /game/heartbeat`.
+4. On game-over `POST /game/submit-score` runs the anti-cheat checks and inserts
+   the row.
+5. Leaderboard, stats and profile come from `GET` routes, cached by React Query.
+6. Expired access tokens are refreshed transparently by the API client, which
+   shares one in-flight refresh across concurrent requests — refresh tokens are
+   single-use, so parallel refreshes would invalidate each other.
 
 ### Security Model
 
-- **Row Level Security** on every table; policies scoped to `auth.uid()`.
-- **Score writes** restricted to the `service_role` key -- only edge functions can insert scores, never the browser.
-- **JWT gateway enforcement** enabled for score-related edge functions (`verify_jwt=true`).
-- **CORS allowlist** enforced in edge functions (localhost + production domain + optional `ALLOWED_ORIGINS` secret override).
+Authorization lives in the Worker: the user id comes from the token, and no
+route accepts a caller-supplied id. Postgres keeps the guarantees that must hold
+regardless of application bugs.
+
+- **No client-reachable database.** The connection string exists only as a
+  Worker secret.
+- **Passwords** are bcrypt (cost 10) via pgcrypto. Unknown-email and
+  wrong-password responses are indistinguishable in both content and timing.
+- **Login throttling** — 10 failures locks the account for 15 minutes.
+- **Refresh tokens** are stored as SHA-256 digests and are single-use.
+- **CORS allowlist** for browser origins; the packaged desktop app sends no
+  `Origin`, which is safe here because auth is a bearer token, never a cookie.
+- **Avatar uploads** are capped at 2 MB, limited to JPEG/PNG/WebP, and the
+  declared type is verified against the file's magic bytes.
 - **Anti-cheat pipeline** in `submit-score`:
   - Session token must match.
   - Session must be at least 10 s old.
@@ -75,7 +102,10 @@ supabase/
   - Last heartbeat timestamp must be fresh.
   - Session is atomically claimed before insert (replay-resistant).
   - Rate-limited to one score every 5 s.
+  - All durations are computed by Postgres from its own timestamps, so no check
+    depends on the client's clock.
 - **DB integrity checks**:
+  - `CHECK` constraints bound score, level and lines.
   - `scores.session_id` is unique (one score per session).
   - Trigger validates `session_id -> user_id` ownership and completed session state.
 
@@ -170,9 +200,9 @@ The `clearedRows` array is converted to a `Set` via `useMemo` to give O(1) looku
 
 ### 2. Server-Side Score Validation
 
-**Challenge:** A browser-based game can be trivially cheated -- POST any score you want to the API.
+**Challenge:** A desktop game is fully inspectable by whoever runs it -- POST any score you want to the API.
 
-**Solution:** A multi-layered validation pipeline in the `submit-score` edge function. Game sessions are created server-side with a cryptographic token. The client must prove continuous play via heartbeats. Submitted scores are cross-checked against theoretical min/max values derived from the number of lines cleared. Level must be consistent with lines. Session duration must be physically plausible. All score writes go through the service role key -- the browser never writes to the `scores` table directly.
+**Solution:** A multi-layered validation pipeline in `submit-score`. Game sessions are created server-side with a cryptographic token. The client must prove continuous play via heartbeats, and the heartbeat counter is incremented atomically in SQL so it cannot be inflated by firing requests in parallel. Submitted scores are cross-checked against theoretical min/max values derived from the number of lines cleared. Level must be consistent with lines. Session duration must be physically plausible, measured against database timestamps rather than the client's clock. The client cannot write to `scores` at all -- it has no database access.
 
 ### 3. Ghost Piece Without Extra Renders
 
@@ -188,44 +218,67 @@ The `clearedRows` array is converted to a `Set` via `useMemo` to give O(1) looku
 
 ### 5. Mobile Layout Without Scroll
 
-**Challenge:** Tetris needs to fit the full board + controls on a phone screen without any scrolling.
+**Challenge:** The full board + controls need to fit a phone screen without any scrolling.
 
 **Solution:** The mobile layout uses `h-[calc(100dvh-48px)]` (accounting for the navbar), CSS Grid for the board with `aspect-ratio: 10 / 20`, and a `flex-1 min-h-0` container that lets the board fill whatever vertical space remains. Stats and controls are fixed-height strips above and below.
 
 ---
 
-## Local Development (VS Code)
+## Local Development
+
+### Client
 
 ```bash
 npm install
-npm run dev
+npm run dev          # Vite + Electron
 ```
 
-Create a `.env` file in the project root (you can copy from `.env.example`):
+`.env` in the project root holds one variable (copy from `.env.example`):
 
 ```
-VITE_SUPABASE_URL=<your-supabase-url>
-VITE_SUPABASE_ANON_KEY=<your-anon-key>
+VITE_API_URL=https://nexgrid-api.nexgrid-api.workers.dev
 ```
 
-Then run the production checks:
+It defaults to the deployed API so a locally built desktop app never ships
+pointing at localhost. Point it at `http://127.0.0.1:8787` only while running
+the Worker locally.
+
+Production checks:
 
 ```bash
 npm run typecheck
+npm run lint
 npm run build
 ```
 
-If you migrated from another online IDE/template, make sure your Supabase keys were re-added locally. Environment variables are not transferred automatically to your machine.
+### Worker API
 
-### Edge Function Secrets (Supabase)
-
-Set this secret in your Supabase project for production domain control:
-
+```bash
+cd worker
+npm install
+npm run migrate      # applies migrations/*.sql to Neon, idempotent
+npm run dev          # local Worker on :8787
+npm run deploy
 ```
-ALLOWED_ORIGINS=https://your-app.example
-```
 
-You can provide multiple origins as comma-separated values.
+`worker/.dev.vars` supplies secrets locally and is gitignored. In production the
+same names are Worker secrets, set with `wrangler secret put`:
+
+| Secret | Purpose |
+|---|---|
+| `DATABASE_URL` | Neon pooled connection string |
+| `JWT_SECRET` | HS256 signing key for access tokens |
+
+Non-secret configuration (`R2_PUBLIC_URL`, `ALLOWED_ORIGINS`) lives in
+`worker/wrangler.toml`. Add any new frontend origin to `ALLOWED_ORIGINS`;
+the packaged desktop app needs no entry, since it sends no `Origin` header.
+
+### Releases
+
+Pushing a `v*` tag builds and publishes a GitHub release, which is also the
+auto-update feed. The build needs a `VITE_API_URL` repository secret. The
+Microsoft Store package is built separately with `npm run dist:store`, and
+disables the self-updater — Store apps are updated by the Store.
 
 ---
 

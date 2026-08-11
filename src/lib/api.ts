@@ -2,11 +2,20 @@ import { authStore, type AuthSession } from './authStore';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-if (!API_URL) {
-  throw new Error('Missing VITE_API_URL. Point it at the NexGrid Worker API.');
-}
+/*
+  Reported rather than thrown. This module is part of the synchronous import
+  graph behind <App>, so throwing here would run before React mounts and leave a
+  blank screen with nothing but a console message — the ErrorBoundary would
+  never get the chance to render. App throws this during render instead.
 
-const BASE = API_URL.replace(/\/+$/, '');
+  The wording matters: ErrorBoundary selects its configuration-specific message
+  by looking for the phrase "environment variables".
+*/
+export const apiConfigError: string | null = API_URL
+  ? null
+  : 'Missing required environment variables: set VITE_API_URL to the NexGrid Worker API URL.';
+
+const BASE = (API_URL ?? '').replace(/\/+$/, '');
 
 export class ApiError extends Error {
   readonly status: number;
