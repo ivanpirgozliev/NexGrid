@@ -98,8 +98,12 @@ function storeArtSvg(width, height) {
     sits above centre to leave the text clear air. The square version is the
     glyph alone, centred.
   */
-  const glyphWidth = width * (isPortrait ? 0.52 : 0.55);
-  const scale = glyphWidth / GLYPH_W;
+  /*
+    Sized against the shorter edge, so a 16:9 canvas gets a glyph that fits its
+    height instead of one scaled off the top and bottom.
+  */
+  const glyphSize = Math.min(width, height) * (isPortrait ? 0.52 : 0.55);
+  const scale = glyphSize / GLYPH_W;
   const cy = isPortrait ? height * 0.42 : height / 2;
 
   const wordmark = !isPortrait
@@ -133,6 +137,8 @@ mkdirSync(storeDir, { recursive: true });
 const storeTargets = [
   { name: 'PosterArt1440x2160.png', width: 1440, height: 2160 },
   { name: 'BoxArt2160x2160.png', width: 2160, height: 2160 },
+  // Super hero art must not carry the product title, so it is glyph-only.
+  { name: 'SuperHeroArt3840x2160.png', width: 3840, height: 2160 },
 ].map((t) => ({ ...t, svg: storeArtSvg(t.width, t.height), dir: storeDir }));
 
 for (const t of [...targets.map((t) => ({ ...t, dir: outDir })), ...storeTargets]) {
