@@ -6,7 +6,6 @@ interface AudioControlsProps {
   masterVolume: number;
   effectsVolume: number;
   muted: boolean;
-  compact?: boolean;
   onToggleMute: () => void;
   onMasterVolumeChange: (value: number) => void;
   onEffectsVolumeChange: (value: number) => void;
@@ -20,15 +19,14 @@ export const AudioControls = memo(function AudioControls({
   masterVolume,
   effectsVolume,
   muted,
-  compact = false,
   onToggleMute,
   onMasterVolumeChange,
   onEffectsVolumeChange,
 }: AudioControlsProps) {
   return (
-    <div className={`bg-gray-900/50 border border-gray-800 rounded-xl ${compact ? 'p-2' : 'p-4'}`}>
+    <div className={"bg-gray-900/50 border border-gray-800 rounded-xl p-4"}>
       <div className="flex items-center justify-between gap-2 mb-2">
-        <p className={`font-semibold text-gray-500 uppercase tracking-widest ${compact ? 'text-[9px]' : 'text-xs'}`}>
+        <p className={"font-semibold text-gray-500 uppercase tracking-widest text-xs"}>
           Audio
         </p>
         <Button
@@ -36,14 +34,14 @@ export const AudioControls = memo(function AudioControls({
           variant={muted ? 'danger' : 'secondary'}
           size="sm"
           onClick={onToggleMute}
-          className={compact ? 'px-2 py-1 h-6 text-[10px]' : 'px-2.5 py-1.5 h-7 text-[11px]'}
+          className="px-2.5 py-1.5 h-7 text-[11px]"
         >
           {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
           {muted ? 'Muted' : 'On'}
         </Button>
       </div>
 
-      <div className={`flex flex-col ${compact ? 'gap-1.5' : 'gap-2'}`}>
+      <div className={"flex flex-col gap-2"}>
         <label className="block">
           <div className="flex items-center justify-between text-gray-400 text-[10px] mb-1">
             <span>Master</span>

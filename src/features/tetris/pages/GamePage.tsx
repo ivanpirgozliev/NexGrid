@@ -16,6 +16,9 @@ import { Button } from '../../../components/ui/Button';
 const BOARD_ROWS = 20;
 const AUDIO_PREFS_KEY = 'tetris_audio_prefs_v1';
 
+/** Comfortably longer than the 0.9s score-fly animation in ScoreFlyEffect. */
+const SCORE_RECONCILE_MS = 1500;
+
 interface AudioPrefs {
   masterVolume: number;
   effectsVolume: number;
@@ -54,17 +57,6 @@ function readAudioPrefs(): AudioPrefs {
   }
 }
 
-function pickVisibleElement<T extends HTMLElement>(first: T | null, second: T | null): T | null {
-  if (first && first.offsetParent !== null) {
-    return first;
-  }
-
-  if (second && second.offsetParent !== null) {
-    return second;
-  }
-
-  return first ?? second;
-}
 
 export function GamePage() {
   const { state, start, pause, resume } = useTetris();
@@ -81,10 +73,8 @@ export function GamePage() {
   const [scoreFlights, setScoreFlights] = useState<ScoreFlight[]>([]);
   const [scorePulseKey, setScorePulseKey] = useState(0);
 
-  const mobileBoardRef = useRef<HTMLDivElement>(null);
-  const desktopBoardRef = useRef<HTMLDivElement>(null);
-  const mobileScoreCardRef = useRef<HTMLDivElement>(null);
-  const desktopScoreCardRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const scoreCardRef = useRef<HTMLDivElement>(null);
 
   const clearOriginRef = useRef<{ x: number; y: number } | null>(null);
   const prevScoreRef = useRef(state.score);
@@ -113,7 +103,7 @@ export function GamePage() {
 
     playLineClear(state.clearedRows.length);
 
-    const boardElement = pickVisibleElement(mobileBoardRef.current, desktopBoardRef.current);
+    const boardElement = boardRef.current;
     if (!boardElement) {
       return;
     }
@@ -150,11 +140,11 @@ export function GamePage() {
     if (state.score > previousScore) {
       const pointsDelta = state.score - previousScore;
       const linesDelta = state.lines - previousLines;
-      const scoreCardElement = pickVisibleElement(mobileScoreCardRef.current, desktopScoreCardRef.current);
+      const scoreCardElement = scoreCardRef.current;
 
       if (linesDelta > 0 && scoreCardElement) {
         const scoreRect = scoreCardElement.getBoundingClientRect();
-        const boardElement = pickVisibleElement(mobileBoardRef.current, desktopBoardRef.current);
+        const boardElement = boardRef.current;
         const boardRect = boardElement?.getBoundingClientRect();
 
         const fallbackOrigin = {
@@ -185,11 +175,38 @@ export function GamePage() {
     prevLinesRef.current = state.lines;
   }, [state.score, state.lines]);
 
+  /*
+    The flying "+points" animation is decorative, but displayScore only advances
+    when a flight reports arrival. framer-motion does not guarantee
+    onAnimationComplete — an interrupted or never-finished animation silently
+    swallows its points, and the score card then disagrees with the real score
+    for the rest of the game.
+
+    So the card is reconciled on a timer instead of on flights draining: every
+    change restarts it, and once the score stops moving the card snaps to the
+    truth regardless of what the animations did.
+  */
   useEffect(() => {
-    if (scoreFlights.length === 0 && displayScore !== state.score) {
+    if (displayScore === state.score) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setScoreFlights([]);
+      setDisplayScore(state.score);
+    }, SCORE_RECONCILE_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [displayScore, state.score]);
+
+  // Game over is the one moment the number is read carefully, so do not wait
+  // out the timer there.
+  useEffect(() => {
+    if (state.status === 'over') {
+      setScoreFlights([]);
       setDisplayScore(state.score);
     }
-  }, [scoreFlights.length, displayScore, state.score]);
+  }, [state.status, state.score]);
 
   const handleFlightArrive = useCallback(
     (flight: ScoreFlight) => {
@@ -257,80 +274,27 @@ export function GamePage() {
         </div>
       )}
 
-      <div className="lg:hidden flex flex-col h-[calc(100dvh-48px)] sm:h-[calc(100dvh-64px)] px-2 py-1.5 gap-1 overflow-hidden">
-        <div className="shrink-0 flex gap-1 items-stretch">
-          <div className="flex-1 flex gap-1 min-w-0">
-            <GameStats
-              score={displayScore}
-              level={state.level}
-              lines={state.lines}
-              orientation="horizontal"
-              scoreCardRef={mobileScoreCardRef}
-              scorePulseKey={scorePulseKey > 0 ? scorePulseKey : undefined}
-            />
-          </div>
-          <div className="shrink-0">
-            <NextPiece type={state.next} compact />
-          </div>
-        </div>
-
-        <div className="flex-1 min-h-0 flex justify-center">
-          <div ref={mobileBoardRef} className="relative h-full" style={{ aspectRatio: '10 / 20' }}>
-            <Board
-              board={state.board}
-              current={state.current}
-              clearedRows={state.clearedRows}
-            />
-            <GameOverlay
-              status={state.status}
-              score={state.score}
-              onStart={handleStart}
-              onResume={resume}
-            />
-          </div>
-        </div>
-
-        <div className="shrink-0 flex flex-col gap-1.5">
-          <div className="flex justify-center h-8">
-            {canPause && (
-              <Button variant="secondary" size="sm" onClick={pause} className="w-full max-w-xs gap-1.5 h-8 text-xs">
-                <Pause className="w-3 h-3" />
-                Pause
-              </Button>
-            )}
-            {state.status === 'paused' && (
-              <Button variant="secondary" size="sm" onClick={resume} className="w-full max-w-xs gap-1.5 h-8 text-xs">
-                <Play className="w-3 h-3" />
-                Resume
-              </Button>
-            )}
-          </div>
-
-          <AudioControls
-            compact
-            muted={audioPrefs.muted}
-            masterVolume={audioPrefs.masterVolume}
-            effectsVolume={audioPrefs.effectsVolume}
-            onToggleMute={handleToggleMute}
-            onMasterVolumeChange={handleMasterVolumeChange}
-            onEffectsVolumeChange={handleEffectsVolumeChange}
-          />
-        </div>
-      </div>
-
-      {/* Desktop layout */}
-      <div className="hidden lg:flex items-start justify-center gap-8 px-4 py-8 max-w-[840px] mx-auto">
-        <div className="flex flex-col gap-3 w-48">
+      {/*
+        The board takes the available vertical space and derives its width from
+        the 10:20 aspect ratio. The side columns are top-aligned rather than
+        stretched, so their cards sit level with the top of the board.
+      */}
+      <div className="flex items-start justify-center gap-8 px-4 py-6 h-[calc(100dvh-64px)]">
+        <div className="flex flex-col gap-3 w-48 shrink-0">
           <GameStats
             score={displayScore}
             level={state.level}
             lines={state.lines}
-            scoreCardRef={desktopScoreCardRef}
+            scoreCardRef={scoreCardRef}
             scorePulseKey={scorePulseKey > 0 ? scorePulseKey : undefined}
           />
         </div>
 
-        <div ref={desktopBoardRef} className="relative shrink-0 w-[360px]">
+        <div
+          ref={boardRef}
+          className="relative shrink-0 h-full max-h-full"
+          style={{ aspectRatio: '10 / 20' }}
+        >
           <Board
             board={state.board}
             current={state.current}
@@ -344,7 +308,7 @@ export function GamePage() {
           />
         </div>
 
-        <div className="flex flex-col gap-3 w-48">
+        <div className="flex flex-col gap-3 w-48 shrink-0">
           <NextPiece type={state.next} />
 
           {canPause && (
